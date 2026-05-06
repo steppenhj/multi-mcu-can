@@ -1,0 +1,39 @@
+# =============================================================
+# Line ending normalization
+# Forces LF in the repo regardless of OS the contributor uses.
+# Windows checkouts get CRLF; Linux/Mac get LF.
+# =============================================================
+
+# Default: normalize text files to LF in the repo
+* text=auto eol=lf
+
+# Source code — explicit LF
+*.c    text eol=lf
+*.h    text eol=lf
+*.cpp  text eol=lf
+*.hpp  text eol=lf
+*.py   text eol=lf
+*.sh   text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+
+# CubeMX .ioc file is INI-format text, but CubeIDE on Windows
+# may rewrite it with CRLF. Normalize to LF in repo.
+*.ioc  text eol=lf
+
+# Linker scripts and assembly
+*.ld   text eol=lf
+*.s    text eol=lf
+*.S    text eol=lf
+
+# Binary files — never touch
+*.bin  binary
+*.elf  binary
+*.hex  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.pdf  binary
+*.zip  binary

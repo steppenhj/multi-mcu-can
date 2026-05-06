@@ -1,0 +1,60 @@
+# =============================================================
+# STM32CubeIDE / Eclipse build artifacts
+# =============================================================
+Debug/
+Release/
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+*.o
+*.d
+*.su
+
+# Eclipse / CubeIDE workspace metadata
+.metadata/
+.settings/
+.cproject
+.project
+.launches/
+*.launch
+RemoteSystemsTempFiles/
+
+# CubeMX generated cache (keep .ioc itself; ignore caches)
+*.ioc.bak
+mxproject_cache/
+
+# =============================================================
+# OS / Editor
+# =============================================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# =============================================================
+# Python (RPi side)
+# =============================================================
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# =============================================================
+# Logs and local working files
+# =============================================================
+*.log
+logs/
+docs/photos/*.tmp
+
+# =============================================================
+# Things to KEEP (negation patterns, just in case)
+# =============================================================
+!.gitkeep
+!.gitignore
+!.gitattributes
