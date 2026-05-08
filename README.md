@@ -37,6 +37,10 @@ These four rules are non-negotiable for every phase in this repo.
 
 Three nodes on a single CAN 2.0 bus at 500 kbps, with 120Ω termination at both physical ends.
 
+### Phase 0 — Deployment Topology (Power & GND only)
+
+![Phase 0 deployment diagram](docs/diagrams/deployment_phase0.png)
+
 ```
                        CAN_H ────────────────────────────────────
                                   │             │              │
