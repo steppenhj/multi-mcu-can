@@ -1,0 +1,69 @@
+@startuml deployment_phase0
+
+' ============================================================
+' Phase 0 — Power & Ground Topology Only
+' Verification procedure: docs/phase0_checklist.md
+' ============================================================
+
+skinparam node {
+  BackgroundColor White
+  BorderColor Black
+}
+skinparam rectangle {
+  BackgroundColor #FFF8DC
+}
+
+' --- Host side ---
+node "Host PC" as host <<device>> {
+  rectangle "Serial Monitor\n115200 8N1" as monitor <<execution environment>>
+}
+
+' --- Power source for RPi ---
+node "5V / 5A Adapter" as adapter <<device>>
+
+' --- MCU boards ---
+node "NUCLEO-F446RE" as f446 <<device>> {
+  rectangle "Pins:\n+ USB_5V\n+ 3V3 / GND\n+ PA5 (LD2)\n+ PA2/PA3 (USART2)" as f446pins
+}
+
+node "NUCLEO-F411RE" as f411 <<device>> {
+  rectangle "Pins:\n+ USB_5V\n+ 3V3 / GND\n+ PA5 (LD2)\n+ PA2/PA3 (USART2)" as f411pins
+}
+
+' --- RPi ---
+node "Raspberry Pi 5 (4GB)" as rpi <<device>> {
+  rectangle "Raspberry Pi OS\n(Bookworm)" as rpios <<execution environment>>
+  rectangle "Pins:\n+ 5V_IN / GND\n+ 3V3" as rpipins
+}
+
+' --- Common GND rail (the physical breadboard rail) ---
+node "Common GND Rail" as gnd <<medium>>
+
+' --- Connections: Power (red) ---
+host -[#red,thickness=2]-> f446 : "<<USB>>\n5V power\n+ USART2 over\nST-Link VCP"
+host -[#red,thickness=2]-> f411 : "<<USB>>\n5V power\n+ USART2 over\nST-Link VCP"
+adapter -[#red,thickness=2]-> rpi : "<<DC power>>\n5V / 5A"
+
+' --- Connections: GND (black, thick) — STAR topology ---
+f446 -[#black,thickness=3]-> gnd : "<<GND>>\ndedicated wire\n< 1Ω"
+f411 -[#black,thickness=3]-> gnd : "<<GND>>\ndedicated wire\n< 1Ω"
+rpi  -[#black,thickness=3]-> gnd : "<<GND>>\ndedicated wire\n< 1Ω"
+
+' --- Notes ---
+note top of gnd
+  Star topology.
+  Each board's GND wire connects 
+  DIRECTLY to this rail,
+  NOT through another board.
+  Continuity test: < 1Ω from any
+  board GND to this rail.
+end note
+
+note as scope
+  **Out of scope for Phase 0:**
+  - CAN bus (Phase 1+)
+  - MCP2515 / SPI (Phase 3+)
+  - Battery / motor power (entire repo)
+end note
+
+@enduml
