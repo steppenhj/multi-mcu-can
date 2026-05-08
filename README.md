@@ -213,6 +213,9 @@ Once the three-node bus is rock-solid, possible extensions:
 
 ---
 
+java -jar /tmp/plantuml.jar docs/diagrams/deployment_phase0.puml
+(plantuml 변경시 사용 명령어)
+
 ## Author
 
 **박해진 (Haejin Park)**  
