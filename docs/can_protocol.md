@@ -1,97 +1,97 @@
-# CAN Protocol Specification
+# CAN 프로토콜 명세
 
-Bus configuration and message dictionary for the multi-mcu-can project.
-
----
-
-## Bus Configuration
-
-| Parameter | Value | Notes |
-|-----------|-------|-------|
-| Standard | CAN 2.0A (11-bit identifiers) | CAN-FD reserved for future migration |
-| Bitrate | 500 kbps | Common automotive default |
-| Sample Point | 87.5% | Recommended for 500 kbps |
-| Termination | 120Ω at both physical bus ends | Total bus impedance ≈ 60Ω |
-| Maximum bus length | < 40m at 500 kbps | Bench setup is < 1m |
+multi-mcu-can 프로젝트의 버스 구성과 메시지 사전.
 
 ---
 
-## Message Dictionary
+## 버스 구성
 
-### `0x010` — F446RE Heartbeat
+| 파라미터 | 값 | 비고 |
+|----------|----|------|
+| 표준 | CAN 2.0A (11비트 식별자) | CAN-FD는 향후 마이그레이션을 위해 예약 |
+| 비트레이트 | 500 kbps | 자동차 일반 기본값 |
+| 샘플 포인트 | 87.5% | 500 kbps 권장값 |
+| 종단 저항 | 버스 양쪽 물리적 끝단에 120Ω | 총 버스 임피던스 ≈ 60Ω |
+| 최대 버스 길이 | 500 kbps에서 < 40m | 벤치 설정은 < 1m |
 
-| Byte | Field | Type | Description |
-|------|-------|------|-------------|
-| 0–3  | counter   | uint32 LE | Increments every 100ms, wraps at 2^32 |
-| 4    | flags     | uint8     | bit 0: hardware fault, bit 1: peripheral fault, bit 2–7: reserved |
-| 5    | uptime_s_lsb | uint8 | Uptime seconds, low byte |
-| 6    | uptime_s_msb | uint8 | Uptime seconds, high byte |
+---
+
+## 메시지 사전
+
+### `0x010` — F446RE 하트비트
+
+| 바이트 | 필드 | 타입 | 설명 |
+|--------|------|------|------|
+| 0–3  | counter   | uint32 LE | 100ms마다 증가, 2^32에서 래핑 |
+| 4    | flags     | uint8     | bit 0: 하드웨어 결함, bit 1: 페리퍼럴 결함, bit 2–7: 예약 |
+| 5    | uptime_s_lsb | uint8 | 가동 시간(초), 하위 바이트 |
+| 6    | uptime_s_msb | uint8 | 가동 시간(초), 상위 바이트 |
 | 7    | reserved  | uint8     | 0x00 |
 
-DLC: 8. Cycle: 100ms. Highest priority of application traffic.
+DLC: 8. 주기: 100ms. 애플리케이션 트래픽 중 최고 우선순위.
 
-### `0x011` — F411RE Heartbeat
+### `0x011` — F411RE 하트비트
 
-Identical layout to `0x010`.
+`0x010`과 동일한 레이아웃.
 
-### `0x100` — F446RE Status (placeholder)
+### `0x100` — F446RE 상태 (자리 표시자)
 
-Reserved for future actuator-related telemetry. In Phase 2–5, populated with deterministic test pattern (e.g., bytes 0–7 = sawtooth) for verification.
+미래 액추에이터 관련 원격 측정 데이터를 위해 예약. Phase 2–5에서는 검증용 결정론적 테스트 패턴(예: 바이트 0–7 = 톱니파)으로 채워진다.
 
-DLC: 8. Cycle: 50ms.
+DLC: 8. 주기: 50ms.
 
-### `0x200` — F411RE Sensor Data (placeholder)
+### `0x200` — F411RE 센서 데이터 (자리 표시자)
 
-Reserved for future sensor telemetry. Same test-pattern convention as `0x100`.
+미래 센서 원격 측정 데이터를 위해 예약. `0x100`과 동일한 테스트 패턴 관례 사용.
 
-DLC: 8. Cycle: 50ms.
+DLC: 8. 주기: 50ms.
 
-### `0x7E0` — RPi Diagnostic Request
+### `0x7E0` — RPi 진단 요청
 
-UDS-style diagnostic master request, broadcast to all nodes.
+UDS 스타일 진단 마스터 요청, 모든 노드에 브로드캐스트.
 
-| Byte | Field | Description |
-|------|-------|-------------|
-| 0    | target node | 0xE8 = F446RE, 0xE9 = F411RE, 0xFF = broadcast |
-| 1    | service ID  | 0x10 = session control, 0x11 = ECU reset, 0x22 = read DID |
-| 2–7  | payload     | Service-specific |
+| 바이트 | 필드 | 설명 |
+|--------|------|------|
+| 0    | 대상 노드 | 0xE8 = F446RE, 0xE9 = F411RE, 0xFF = 브로드캐스트 |
+| 1    | 서비스 ID  | 0x10 = 세션 제어, 0x11 = ECU 초기화, 0x22 = DID 읽기 |
+| 2–7  | 페이로드   | 서비스별 |
 
-DLC: 8. Event-driven (no cycle).
+DLC: 8. 이벤트 기반 (주기 없음).
 
-### `0x7E8` / `0x7E9` — Diagnostic Responses
+### `0x7E8` / `0x7E9` — 진단 응답
 
-`0x7E8` from F446RE, `0x7E9` from F411RE. Layout follows ISO-15765-2 single-frame format:
+`0x7E8`은 F446RE, `0x7E9`는 F411RE에서 송신. 레이아웃은 ISO-15765-2 단일 프레임 형식을 따름:
 
-| Byte | Field | Description |
-|------|-------|-------------|
-| 0    | PCI       | Upper nibble = 0 (single frame), lower nibble = data length |
-| 1    | service ID + 0x40 | Positive response, or 0x7F + NRC for negative |
-| 2–7  | payload   | Service-specific |
-
----
-
-## Priority Rationale
-
-CAN's arbitration is dominant-low: lower numerical ID wins the bus. Allocation reflects this:
-
-- **`0x010`–`0x011` (Heartbeats)** — Highest priority. If the bus is congested, liveness telemetry must still get through. Loss of heartbeat is the gateway's only reliable signal of node failure.
-- **`0x100`–`0x200` (Application data)** — Mid priority. Periodic but tolerant of single-cycle delays.
-- **`0x7E0`–`0x7E9` (Diagnostics)** — Lowest priority. Event-driven, request-response, never in time-critical path.
+| 바이트 | 필드 | 설명 |
+|--------|------|------|
+| 0    | PCI       | 상위 니블 = 0 (단일 프레임), 하위 니블 = 데이터 길이 |
+| 1    | 서비스 ID + 0x40 | 긍정 응답, 또는 부정 응답의 경우 0x7F + NRC |
+| 2–7  | 페이로드   | 서비스별 |
 
 ---
 
-## Timing Budget (Phase 4 target)
+## 우선순위 근거
 
-At 500 kbps, a standard 8-byte frame takes approximately 220 µs on the wire.
+CAN의 중재는 우세 로우(dominant-low) 방식: 낮은 숫자 ID가 버스를 점유한다. 할당은 이를 반영한다:
 
-Periodic load: heartbeats (2 × 10 Hz) + status/sensor (2 × 20 Hz) = 60 frames/sec ≈ 13 ms/sec of bus time = **1.3% bus load**. Plenty of headroom for diagnostic bursts.
-
-Phase 4 will measure actual jitter on `0x010` and `0x011` and verify it stays below 5 ms under normal load and below 20 ms during diagnostic bursts.
+- **`0x010`–`0x011` (하트비트)** — 최고 우선순위. 버스가 혼잡해도 노드 생존 원격 측정은 반드시 전달되어야 한다. 하트비트 소실은 게이트웨이가 노드 장애를 감지할 수 있는 유일한 신뢰할 수 있는 신호다.
+- **`0x100`–`0x200` (애플리케이션 데이터)** — 중간 우선순위. 주기적이지만 단일 사이클 지연은 허용.
+- **`0x7E0`–`0x7E9` (진단)** — 최저 우선순위. 이벤트 기반, 요청-응답 방식, 시간 중요 경로에 절대 없음.
 
 ---
 
-## Future Extensions (out of scope for Phase 0–5)
+## 타이밍 예산 (Phase 4 목표)
 
-- **CAN-FD migration** — F446RE supports FDCAN; F411RE does not. Would require replacing F411RE node.
-- **ISO-TP multi-frame** — Currently all diagnostic responses fit in 8 bytes. Multi-frame support added when payloads exceed this.
-- **UDS service set expansion** — Currently only $10, $11, $22 planned. Programming session ($27, $34, $36, $37) reserved for OTA reintegration with parent project.
+500 kbps에서 표준 8바이트 프레임은 버선에서 약 220 µs 소요.
+
+주기 부하: 하트비트 (2 × 10 Hz) + 상태/센서 (2 × 20 Hz) = 60 프레임/초 ≈ 13 ms/초 버스 점유 = **버스 부하 1.3%**. 진단 버스트를 위한 여유 충분.
+
+Phase 4에서는 `0x010`과 `0x011`의 실제 지터를 측정하여, 정상 부하에서 5ms 미만, 진단 버스트 중에도 20ms 미만을 유지하는지 검증한다.
+
+---
+
+## 향후 확장 (Phase 0–5 범위 밖)
+
+- **CAN-FD 마이그레이션** — F446RE는 FDCAN을 지원하지만 F411RE는 지원 안 함. F411RE 노드 교체 필요.
+- **ISO-TP 다중 프레임** — 현재 모든 진단 응답은 8바이트에 맞음. 페이로드가 이를 초과할 때 다중 프레임 지원 추가.
+- **UDS 서비스 세트 확장** — 현재 $10, $11, $22만 계획. 프로그래밍 세션 ($27, $34, $36, $37)은 부모 프로젝트와의 OTA 재통합을 위해 예약.

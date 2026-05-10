@@ -1,6 +1,4 @@
-# multi-mcu-can: CAN 2.0 Multi-MCU Distributed Communication
-
-🇰🇷 [한국어](README.kr.md)
+# multi-mcu-can: CAN 2.0 다중 MCU 분산 통신
 
 ![C](https://img.shields.io/badge/C-STM32_HAL-A8B9CC?logo=c&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
@@ -8,38 +6,38 @@
 ![Raspberry Pi](https://img.shields.io/badge/MPU-Raspberry_Pi_5-C51A4A?logo=raspberrypi&logoColor=white)
 ![CAN](https://img.shields.io/badge/Bus-CAN_2.0-green)
 
-A focused study of **CAN 2.0 multi-node communication** across two STM32 boards and a Raspberry Pi 5. No actuators, no chassis, no application logic — just the bus, its protocol, and the discipline required to make distributed MCUs talk reliably.
+STM32 보드 두 개와 Raspberry Pi 5를 연결하는 **CAN 2.0 다중 노드 통신** 집중 학습 프로젝트. 액추에이터도, 섀시도, 애플리케이션 로직도 없다 — 버스와 프로토콜, 그리고 분산 MCU를 안정적으로 통신시키기 위해 필요한 규율에만 집중한다.
 
-This repository is a follow-up to **[Neuro-Drive](https://github.com/steppenhj/neuro-drive)**, where Phase 6 originally lived. It was extracted to strip away the actuator layer and concentrate on fundamentals.
-
----
-
-## Why a Separate Repo
-
-The parent project ran into a hardware incident during the F446RE migration: a servo stalled, a GND jumper caught fire, and the L298N driver was lost alongside the servo. The root cause was not the code — it was the assumption that previously-working hardware would still be working after a layer was changed underneath it.
-
-This repo is built around the discipline that was missing the first time: **verify each layer before adding the next.**
+이 저장소는 **[Neuro-Drive](https://github.com/steppenhj/neuro-drive)** 의 후속 프로젝트로, 원래 Phase 6에 해당하는 내용을 분리한 것이다. 액추에이터 레이어를 걷어내고 기초에 집중하기 위해 별도 저장소로 추출했다.
 
 ---
 
-## Operating Principles
+## 별도 저장소를 만든 이유
 
-These four rules are non-negotiable for every phase in this repo.
+부모 프로젝트에서 F446RE 마이그레이션 중 하드웨어 사고가 발생했다: 서보가 스톨(stall)했고, GND 점퍼 선에 불이 붙었으며, L298N 드라이버가 서보와 함께 망가졌다. 원인은 코드가 아니었다 — 하위 레이어를 변경한 후에도 이전에 정상 작동하던 하드웨어가 여전히 정상일 것이라는 가정이 문제였다.
 
-1. **Verify power and ground before suspecting code.** A multimeter check costs 30 seconds; a burnt board costs days.
-2. **If a component makes abnormal sound or heat without expected motion, cut power immediately.** Investigate before re-applying. Stalled motors and stalled servos are silent killers — until they aren't.
-3. **Add one layer at a time.** Never debug two new layers simultaneously. If the bus is new, the firmware should be old. If the firmware is new, the bus should be known-good.
-4. **Keep a known-good backup. Branch before any migration.** "I can revert if it breaks" only works if the thing you're reverting to is actually clean.
+이 저장소는 처음에 빠뜨렸던 규율을 중심으로 구성된다: **다음 레이어를 추가하기 전에 현재 레이어를 반드시 검증한다.**
 
 ---
 
-## Architecture
+## 운영 원칙
 
-Three nodes on a single CAN 2.0 bus at 500 kbps, with 120Ω termination at both physical ends.
+이 저장소의 모든 Phase에서 타협 불가능한 4가지 규칙.
 
-### Phase 0 — Deployment Topology (Power & GND only)
+1. **코드를 의심하기 전에 전원과 GND를 먼저 확인한다.** 멀티미터 점검은 30초면 된다; 보드가 타면 며칠이 날아간다.
+2. **기대하는 동작 없이 비정상적인 소리나 열이 발생하면 즉시 전원을 차단한다.** 재인가 전에 원인을 파악한다. 스톨된 모터와 서보는 조용한 킬러다 — 조용하지 않게 되기 전까지는.
+3. **한 번에 하나의 레이어만 추가한다.** 새로운 레이어 두 개를 동시에 디버깅하지 않는다. 버스가 새 것이라면 펌웨어는 검증된 것을 쓴다. 펌웨어가 새 것이라면 버스는 이미 검증된 상태여야 한다.
+4. **Known-good 백업을 유지한다. 마이그레이션 전에는 반드시 브랜치를 만든다.** "문제가 생기면 되돌리면 된다"는 말은, 되돌아갈 대상이 실제로 깨끗할 때만 통한다.
 
-![Phase 0 deployment diagram](docs/diagrams/deployment_phase0.png)
+---
+
+## 아키텍처
+
+단일 CAN 2.0 버스에 세 노드, 500 kbps, 양쪽 물리적 끝단에 120Ω 종단 저항.
+
+### Phase 0 — 배포 토폴로지 (전원 & GND만)
+
+![Phase 0 배포 다이어그램](docs/diagrams/deployment_phase0.png)
 
 ```
                        CAN_H ────────────────────────────────────
@@ -62,70 +60,70 @@ Three nodes on a single CAN 2.0 bus at 500 kbps, with 120Ω termination at both 
                                           └──────────┘
 ```
 
-**Node roles** (deliberately abstract — no actuators yet):
-- **F446RE** — placeholder for future MotorECU. For now, periodic status broadcaster.
-- **F411RE** — placeholder for future SensorECU. For now, periodic data broadcaster.
-- **RPi 5** — gateway, logger, diagnostic master. Uses MCP2515 + TJA1050 over SPI.
+**노드 역할** (의도적으로 추상화 — 아직 액추에이터 없음):
+- **F446RE** — 미래 MotorECU 자리 표시자. 현재는 주기적 상태 브로드캐스터.
+- **F411RE** — 미래 SensorECU 자리 표시자. 현재는 주기적 데이터 브로드캐스터.
+- **RPi 5** — 게이트웨이, 로거, 진단 마스터. MCP2515 + TJA1050 SPI 연결.
 
 ---
 
-## Phase Plan
+## Phase 계획
 
-Each phase produces a **standalone, independently buildable, regression-testable** artifact. A later phase failing must not break the ability to run an earlier one.
+각 Phase는 **독립적으로 빌드 가능하고, 회귀 테스트가 가능한** 산출물을 만든다. 이후 Phase가 실패해도 이전 Phase를 실행할 수 있어야 한다.
 
-| Phase | Goal | Verification | Nodes |
-|:-----:|------|--------------|:-----:|
-| **0** | Power & GND validation, basic life signs | Multimeter readings logged, "I'm alive" UART output from each board | 3 independent |
-| **1** | F446RE bxCAN internal loopback | TX/RX counters increment in sync via UART monitor | 1 |
-| **2** | F446RE ↔ F411RE direct two-node CAN (no MCP2515) | LED mirror: button on one node → LED on the other within 50ms | 2 |
-| **3** | + RPi5 (MCP2515) joins the bus | `candump can0` shows both STM32 messages with correct IDs and DLC | 3 |
-| **4** | Periodic + event-driven message scheduling, priority handling | Bus log analysis: jitter < 5ms on periodic msgs, no priority inversion | 3 |
-| **5** | Error handling, bus-off recovery, diagnostic exchange (UDS-style) | Intentional unplug/replug scenario; node recovers within 1s | 3 |
+| Phase | 목표 | 검증 방법 | 노드 수 |
+|:-----:|------|-----------|:-------:|
+| **0** | 전원 & GND 검증, 기본 동작 확인 | 멀티미터 측정값 기록, 각 보드에서 "I'm alive" UART 출력 | 3개 독립 |
+| **1** | F446RE bxCAN 내부 루프백 | TX/RX 카운터가 UART 모니터에서 동기적으로 증가 | 1 |
+| **2** | F446RE ↔ F411RE 직접 2노드 CAN (MCP2515 없음) | LED 미러링: 한 노드의 버튼 → 다른 노드의 LED, 50ms 이내 | 2 |
+| **3** | + RPi5 (MCP2515) 버스 참여 | `candump can0`에서 올바른 ID와 DLC로 두 STM32 메시지 확인 | 3 |
+| **4** | 주기적 + 이벤트 기반 메시지 스케줄링, 우선순위 처리 | 버스 로그 분석: 주기 메시지 지터 < 5ms, 우선순위 역전 없음 | 3 |
+| **5** | 오류 처리, 버스 오프 복구, 진단 교환 (UDS 스타일) | 의도적 케이블 분리/재연결 시나리오; 노드가 1초 이내 복구 | 3 |
 
-### Why Phase 0 exists separately
+### Phase 0를 별도로 두는 이유
 
-The parent project's incident started with a working car and ended with a burnt servo. The fault propagated through layers nobody was checking. This repo refuses to begin Phase 1 until Phase 0 is signed off — every board powers cleanly, every GND is continuous, and every node prints "alive" over UART before any bus is introduced.
+부모 프로젝트의 사고는 정상 작동하는 차에서 시작해 서보 화재로 끝났다. 아무도 확인하지 않던 레이어를 통해 결함이 전파됐다. 이 저장소는 Phase 0 사인오프 전까지 Phase 1을 시작하지 않는다 — 모든 보드가 깨끗하게 전원이 들어오고, 모든 GND가 연속적이며, 모든 노드가 버스 도입 전에 UART로 "alive"를 출력해야 한다.
 
-### Why Phase 2 has no MCP2515
+### Phase 2에 MCP2515가 없는 이유
 
-The MCP2515 introduces an SPI-to-CAN bridge layer. Bundling that with first-time CAN bring-up means an SPI bug and a CAN bug can hide each other. Phase 2 uses only the STM32s' built-in bxCAN peripherals through transceivers — direct, minimal, debuggable. Phase 3 then adds the MCP2515 as a single new variable.
-
----
-
-## CAN ID Allocation
-
-Borrowing conventions from automotive standards (UDS / ISO-15765) for diagnostic IDs.
-
-| ID      | Sender   | Purpose                              | Cycle  | Priority |
-|---------|----------|--------------------------------------|--------|:--------:|
-| `0x010` | F446RE   | Heartbeat (alive counter, fault flags) | 100ms  | High     |
-| `0x011` | F411RE   | Heartbeat                            | 100ms  | High     |
-| `0x100` | F446RE   | Status (placeholder for actuator data) | 50ms   | Mid      |
-| `0x200` | F411RE   | Sensor data (placeholder)            | 50ms   | Mid      |
-| `0x7E0` | RPi      | Diagnostic request (broadcast)       | event  | Low      |
-| `0x7E8` | F446RE   | Diagnostic response                  | event  | Low      |
-| `0x7E9` | F411RE   | Diagnostic response                  | event  | Low      |
-
-**Lower CAN ID = higher priority** (CAN's natural arbitration). Heartbeats win against everything else, ensuring liveness telemetry is never delayed by application traffic.
-
-Full message dictionary: [`docs/can_protocol.md`](docs/can_protocol.md).
+MCP2515는 SPI-to-CAN 브리지 레이어를 추가한다. 이것을 첫 CAN 시동과 묶으면, SPI 버그와 CAN 버그가 서로를 가릴 수 있다. Phase 2는 트랜시버를 통한 STM32 내장 bxCAN 페리퍼럴만 사용한다 — 직접적이고, 최소한이며, 디버깅 가능하다. 그런 다음 Phase 3에서 단일 새 변수로 MCP2515를 추가한다.
 
 ---
 
-## Repository Layout
+## CAN ID 할당
+
+진단 ID에 대해 자동차 표준(UDS / ISO-15765) 관례를 차용.
+
+| ID      | 송신자   | 목적                                   | 주기   | 우선순위 |
+|---------|----------|----------------------------------------|--------|:--------:|
+| `0x010` | F446RE   | 하트비트 (alive 카운터, 결함 플래그)   | 100ms  | 높음     |
+| `0x011` | F411RE   | 하트비트                               | 100ms  | 높음     |
+| `0x100` | F446RE   | 상태 (액추에이터 데이터 자리 표시자)   | 50ms   | 중간     |
+| `0x200` | F411RE   | 센서 데이터 (자리 표시자)              | 50ms   | 중간     |
+| `0x7E0` | RPi      | 진단 요청 (브로드캐스트)               | 이벤트 | 낮음     |
+| `0x7E8` | F446RE   | 진단 응답                              | 이벤트 | 낮음     |
+| `0x7E9` | F411RE   | 진단 응답                              | 이벤트 | 낮음     |
+
+**낮은 CAN ID = 높은 우선순위** (CAN의 자연적 중재). 하트비트는 모든 것보다 우선하여, 버스가 혼잡해도 노드 생존 원격 측정이 지연되지 않도록 보장한다.
+
+전체 메시지 사전: [`docs/can_protocol.md`](docs/can_protocol.md).
+
+---
+
+## 저장소 구조
 
 ```
 multi-mcu-can/
 ├── README.md
 ├── docs/
-│   ├── hardware.md            # BOM, wiring, pinmaps
-│   ├── can_protocol.md        # Full message dictionary, DLC, byte order
-│   ├── phase0_checklist.md    # Power/GND verification procedure
-│   └── lessons_learned.md     # Incident retrospective from the parent project
+│   ├── hardware.md            # BOM, 배선, 핀맵
+│   ├── can_protocol.md        # 전체 메시지 사전, DLC, 바이트 순서
+│   ├── phase0_checklist.md    # 전원/GND 검증 절차
+│   └── lessons_learned.md     # 부모 프로젝트의 사고 회고
 ├── firmware/
 │   ├── f446re_node/
-│   │   ├── phase0_alive/      # Blink + UART "alive"
-│   │   ├── phase1_loopback/   # bxCAN internal loopback
+│   │   ├── phase0_alive/      # LED 점멸 + UART "alive"
+│   │   ├── phase1_loopback/   # bxCAN 내부 루프백
 │   │   ├── phase2_two_node/
 │   │   ├── phase3_three_node/
 │   │   ├── phase4_scheduling/
@@ -137,9 +135,9 @@ multi-mcu-can/
 │       ├── phase4_scheduling/
 │       └── phase5_recovery/
 ├── rpi/
-│   ├── phase3_gateway/        # SocketCAN setup, basic candump pipeline
-│   ├── phase4_logger/         # Timestamped CAN log + jitter analysis
-│   ├── phase5_diagnostic/     # UDS-style request/response client
+│   ├── phase3_gateway/        # SocketCAN 설정, 기본 candump 파이프라인
+│   ├── phase4_logger/         # 타임스탬프 CAN 로그 + 지터 분석
+│   ├── phase5_diagnostic/     # UDS 스타일 요청/응답 클라이언트
 │   └── tools/
 │       ├── bus_load_monitor.py
 │       └── jitter_analyzer.py
@@ -148,75 +146,75 @@ multi-mcu-can/
     └── can_id_table.csv
 ```
 
-Each phase folder is independently buildable. If Phase 4 breaks, Phase 3 still flashes and runs.
+각 Phase 폴더는 독립적으로 빌드 가능하다. Phase 4가 고장나도, Phase 3은 여전히 플래시하고 실행할 수 있다.
 
 ---
 
-## Hardware
+## 하드웨어
 
-| Component | Part | Role |
+| 구성 요소 | 부품 | 역할 |
 |-----------|------|------|
-| MCU 1 | STM32 NUCLEO-F446RE | bxCAN node 1, future MotorECU |
-| MCU 2 | STM32 NUCLEO-F411RE | bxCAN node 2, future SensorECU |
-| MPU | Raspberry Pi 5 (4GB) | Gateway, logger, diagnostic master |
-| CAN Interface (RPi) | MCP2515 + TJA1050 (SPI→CAN) | Bridges RPi SPI to CAN bus |
-| CAN Transceiver (F446RE) | MCP2551 | Differential physical layer |
-| CAN Transceiver (F411RE) | MCP2551 or TJA1050 | Differential physical layer |
-| Termination | 2 × 120Ω resistors | At both physical ends of the bus |
-| Power | Bench supply or USB only (no battery) | Phase 0–5 all run from desk power |
+| MCU 1 | STM32 NUCLEO-F446RE | bxCAN 노드 1, 미래 MotorECU |
+| MCU 2 | STM32 NUCLEO-F411RE | bxCAN 노드 2, 미래 SensorECU |
+| MPU | Raspberry Pi 5 (4GB) | 게이트웨이, 로거, 진단 마스터 |
+| CAN 인터페이스 (RPi) | MCP2515 + TJA1050 (SPI→CAN) | RPi SPI를 CAN 버스에 연결 |
+| CAN 트랜시버 (F446RE) | MCP2551 | 차동 물리 레이어 |
+| CAN 트랜시버 (F411RE) | MCP2551 또는 TJA1050 | 차동 물리 레이어 |
+| 종단 저항 | 2 × 120Ω 저항 | 버스 양쪽 물리적 끝단에 배치 |
+| 전원 | 벤치 파워서플라이 또는 USB만 (배터리 없음) | Phase 0–5 모두 데스크 전원으로 작동 |
 
-**No battery in this repo.** The parent project's incident involved battery wiring; until the bus is fully stable, this repo runs exclusively from regulated bench/USB power. Battery integration is explicitly out of scope.
+**이 저장소에서는 배터리를 사용하지 않는다.** 부모 프로젝트의 사고는 배터리 배선과 관련이 있었다; 버스가 완전히 안정화될 때까지, 이 저장소는 조정된 벤치/USB 전원만 사용한다. 배터리 통합은 명시적으로 범위 밖이다.
 
-Full BOM and wiring: [`docs/hardware.md`](docs/hardware.md).
+전체 BOM 및 배선: [`docs/hardware.md`](docs/hardware.md).
 
 ---
 
-## Getting Started
+## 시작하기
 
-### Prerequisites
+### 사전 요구 사항
 - STM32CubeIDE
-- Raspberry Pi OS Bookworm with `can-utils` installed
+- `can-utils`가 설치된 Raspberry Pi OS Bookworm
 - Python 3.11
 
-### Phase 0 — Bring-up
+### Phase 0 — 초기 시동
 
 ```bash
-# Each board flashed with its phase0_alive firmware:
-#   - LED blinks at 1Hz
-#   - UART prints "[F446RE] alive, t=12345ms" every second
+# 각 보드에 phase0_alive 펌웨어 플래시:
+#   - LED가 1Hz로 점멸
+#   - UART로 "[F446RE] alive, t=12345ms"를 1초마다 출력
 
-# RPi side (no CAN yet):
+# RPi 쪽 (아직 CAN 없음):
 sudo apt install can-utils python3-pip
-# Verify each board's UART output independently before proceeding
+# 다음 단계로 넘어가기 전에 각 보드의 UART 출력을 독립적으로 확인
 ```
 
-See [`docs/phase0_checklist.md`](docs/phase0_checklist.md) for the multimeter/continuity procedure.
+멀티미터/연속성 확인 절차는 [`docs/phase0_checklist.md`](docs/phase0_checklist.md) 참조.
 
-### Phase 3 — Three-node bus (RPi joins)
+### Phase 3 — 3노드 버스 (RPi 참여)
 
 ```bash
-# RPi side, after MCP2515 wired to SPI0 and dtoverlay configured:
+# MCP2515를 SPI0에 연결하고 dtoverlay 설정 후 RPi 쪽:
 sudo ip link set can0 up type can bitrate 500000
-candump can0     # should show 0x010, 0x011, 0x100, 0x200 streaming
+candump can0     # 0x010, 0x011, 0x100, 0x200이 스트리밍되어야 함
 ```
 
 ---
 
-## Roadmap (post-Phase 5)
+## 로드맵 (Phase 5 이후)
 
-Once the three-node bus is rock-solid, possible extensions:
+3노드 버스가 완전히 안정화된 후 가능한 확장:
 
-- **CAN-FD** migration (F446RE supports it; F411RE does not — would require a node swap)
-- **ISO-TP** (ISO-15765-2) segmented messaging for diagnostic payloads > 8 bytes
-- **UDS** service implementation (read DTC, ECU reset, programming session)
-- Reintegration with the parent **Neuro-Drive** chassis once actuator layer is rebuilt
+- **CAN-FD** 마이그레이션 (F446RE는 지원하지만 F411RE는 지원 안 함 — 노드 교체 필요)
+- **ISO-TP** (ISO-15765-2) 진단 페이로드 > 8바이트 분할 메시지
+- **UDS** 서비스 구현 (DTC 읽기, ECU 초기화, 프로그래밍 세션)
+- 액추에이터 레이어 재구성 후 부모 **Neuro-Drive** 섀시와 재통합
 
 ---
 
 java -jar /tmp/plantuml.jar docs/diagrams/deployment_phase0.puml
 (plantuml 변경시 사용 명령어)
 
-## Author
+## 작성자
 
 **박해진 (Haejin Park)**  
-Kyungpook National University
+경북대학교

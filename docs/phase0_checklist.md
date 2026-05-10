@@ -1,98 +1,98 @@
-# Phase 0 — Power & Ground Verification Checklist
+# Phase 0 — 전원 & GND 검증 체크리스트
 
-> No CAN frame, no UART byte, no SPI transfer happens in this repo until every item below is signed off. This is not optional.
-
----
-
-## Why this exists
-
-The parent project lost a servo and an L298N driver during a board migration. A GND jumper caught fire. Reviewing the incident, the root cause was not a CAN bug, a UART bug, or even bad firmware — it was the assumption that hardware previously known to work was still good after a layer underneath it had changed.
-
-Phase 0 enforces that assumption is never made again.
+> 아래의 모든 항목이 확인되기 전까지 이 저장소에서는 CAN 프레임도, UART 바이트도, SPI 전송도 발생하지 않는다. 선택 사항이 아니다.
 
 ---
 
-## Hardware required
+## 이 문서가 존재하는 이유
 
-- All three boards (F446RE, F411RE, RPi 5)
-- Bench power supply with current limit, **or** known-good USB cables
-- Multimeter capable of continuity beep + DC voltage
-- Solid-core breadboard wires (avoid frayed jumpers — failure mode of the prior incident)
+부모 프로젝트는 보드 마이그레이션 중 서보와 L298N 드라이버를 잃었다. GND 점퍼에 불이 붙었다. 사고를 검토한 결과, 근본 원인은 CAN 버그도, UART 버그도, 잘못된 펌웨어도 아니었다 — 이전에 작동했던 것으로 알려진 하드웨어가 하위 레이어가 변경된 후에도 여전히 양호할 것이라는 가정이었다.
 
-**Explicitly excluded:** any battery, any motor, any servo, any L298N or motor driver. Phase 0–5 are bench-only.
+Phase 0는 그 가정이 다시는 이루어지지 않도록 강제한다.
 
 ---
 
-## Step 1 — Boards in isolation
+## 필요 장비
 
-For each board, in order, **with no other boards connected**:
+- 세 보드 모두 (F446RE, F411RE, RPi 5)
+- 전류 제한 기능이 있는 벤치 파워서플라이, **또는** 검증된 USB 케이블
+- 연속성 비프 + DC 전압 측정이 가능한 멀티미터
+- 단심 브레드보드 와이어 (헤진 점퍼 피하기 — 이전 사고의 실패 모드)
 
-- [ ] Inspect board visually. No bent pins, no scorch marks, no debris.
-- [ ] Plug in USB power. Power LED solid.
-- [ ] Measure 3.3V rail at a known test point. Within ±5% (3.13V — 3.47V).
-- [ ] Measure 5V rail. Within ±5% (4.75V — 5.25V).
-- [ ] Flash `phase0_alive` firmware (STM32) or boot OS (RPi).
-- [ ] Confirm onboard LED blinks at 1Hz.
-- [ ] Connect UART/serial monitor at 115200 8N1. Confirm "alive" message every 1s with monotonic timestamp.
-- [ ] Unplug USB. Re-plug. Confirm clean boot, no garbled UART output on startup.
-
-Each board signs off independently. Only proceed once all three pass.
+**명시적 제외:** 배터리, 모터, 서보, L298N 또는 모터 드라이버. Phase 0–5는 벤치 전원만 사용.
 
 ---
 
-## Step 2 — Common ground topology
+## Step 1 — 보드 개별 검증
 
-Before any signal wire is connected between boards, the GND topology must be planned and verified.
+각 보드를, 순서대로, **다른 보드가 연결되지 않은 상태에서**:
 
-- [ ] Designate **one** common GND rail on the breadboard. Mark it physically (label or colored tape).
-- [ ] Run a dedicated GND wire from each board's GND pin to the common rail. **Do not daisy-chain** GND through other components.
-- [ ] With all boards powered off and unplugged, beep continuity from each board's GND pin to the common rail. Resistance < 1Ω.
-- [ ] Beep continuity between any two boards' GND pins through the rail. Resistance < 1Ω.
-- [ ] Inspect every GND wire physically. No frayed strands, no loose terminals, no wires under tension.
+- [ ] 보드를 육안으로 검사한다. 구부러진 핀, 그을음, 이물질 없음.
+- [ ] USB 전원 연결. 전원 LED 점등.
+- [ ] 알려진 테스트 포인트에서 3.3V 레일 측정. ±5% 이내 (3.13V — 3.47V).
+- [ ] 5V 레일 측정. ±5% 이내 (4.75V — 5.25V).
+- [ ] `phase0_alive` 펌웨어 플래시 (STM32) 또는 OS 부팅 (RPi).
+- [ ] 온보드 LED가 1Hz로 점멸하는지 확인.
+- [ ] 115200 8N1로 UART/시리얼 모니터 연결. 단조로운 타임스탬프와 함께 1초마다 "alive" 메시지 확인.
+- [ ] USB 분리. 재연결. 깨끗한 부팅 확인, 시작 시 UART 출력 깨짐 없음.
 
-> The prior incident's GND fire happened on a jumper that had been bent and flexed across multiple migrations. Wires that look fine can have broken internal strands. **When in doubt, replace the wire.**
-
----
-
-## Step 3 — Power-on sequence with all boards connected (no signals yet)
-
-Only GND lines from Step 2 are connected. No CAN, no UART, no SPI between boards yet.
-
-- [ ] Power on F446RE alone. Measure voltage between F446RE GND and F411RE GND with multimeter — should be 0V (within mV).
-- [ ] Power on F411RE. Re-measure. Still 0V.
-- [ ] Power on RPi. Re-measure all GND-to-GND pairs. All 0V.
-- [ ] Confirm all three boards still print "alive" messages independently over their own UART.
-- [ ] Leave the system powered for 5 minutes. Touch each board casing — no warm spots beyond expected (RPi CPU area is normal). No smell. No discoloration.
+각 보드는 독립적으로 사인오프. 세 보드 모두 통과한 후에만 진행.
 
 ---
 
-## Step 4 — Documentation
+## Step 2 — 공통 GND 토폴로지
 
-- [ ] Photograph the GND topology on the breadboard. Save to `docs/photos/phase0_gnd.jpg`.
-- [ ] Record measured voltages in `docs/phase0_log.md` with date/time.
-- [ ] Note any wire that was replaced and why.
+보드 간 신호 선을 연결하기 전에, GND 토폴로지를 계획하고 검증해야 한다.
 
----
+- [ ] 브레드보드에 **하나의** 공통 GND 레일을 지정한다. 물리적으로 표시한다 (라벨 또는 색상 테이프).
+- [ ] 각 보드의 GND 핀에서 공통 레일로 전용 GND 선을 연결한다. **다른 부품을 통해 GND를 데이지 체인하지 않는다.**
+- [ ] 모든 보드의 전원이 꺼지고 분리된 상태에서, 각 보드의 GND 핀에서 공통 레일까지 연속성 비프. 저항 < 1Ω.
+- [ ] 레일을 통해 두 보드의 GND 핀 사이 연속성 비프. 저항 < 1Ω.
+- [ ] 모든 GND 선을 물리적으로 검사한다. 헤진 가닥 없음, 느슨한 단자 없음, 장력 받는 선 없음.
 
-## Sign-off
-
-Phase 0 is complete when every checkbox above is marked, the log is committed, and the photo is in the repo. **Phase 1 cannot begin until this commit exists.**
-
-If any check fails, do not work around it. Stop, find the cause, fix the cause, restart Phase 0 from Step 1 of the affected board.
+> 이전 사고의 GND 화재는 여러 마이그레이션에 걸쳐 구부러지고 휘어진 점퍼에서 발생했다. 괜찮아 보이는 선도 내부 가닥이 끊어져 있을 수 있다. **의심스러우면 선을 교체한다.**
 
 ---
 
-## Failure modes to watch for
+## Step 3 — 모든 보드 연결 후 전원 투입 시퀀스 (신호 없음)
 
-Drawn from prior experience and CAN bus literature.
+Step 2의 GND 선만 연결되어 있다. 아직 보드 간 CAN, UART, SPI 없음.
 
-| Symptom | Likely cause | Action |
-|---------|--------------|--------|
-| Board boots but UART silent | TX/RX swapped, or baud mismatch | Check pinmap, verify CubeMX baud config |
-| LED blink rate drifts | HSI vs HSE clock misconfigured | Check RCC config in `.ioc` |
-| GND-to-GND voltage > 50mV | Ground loop or marginal connection | Re-seat GND wires, check for daisy chains |
-| Board warm to touch on power-up | Possible short, draw current measurement | **Cut power immediately**, inspect |
-| UART garbled only at startup | Boot pin floating, or BOOT0 wired wrong | Verify BOOT0 to GND |
-| Wire warm in normal operation | Undersized conductor or partial break | **Replace wire**, do not "monitor" |
+- [ ] F446RE만 전원 투입. F446RE GND와 F411RE GND 사이 전압 측정 — 0V여야 한다 (mV 이내).
+- [ ] F411RE 전원 투입. 재측정. 여전히 0V.
+- [ ] RPi 전원 투입. 모든 GND 쌍 재측정. 모두 0V.
+- [ ] 세 보드 모두 각자의 UART로 독립적으로 "alive" 메시지를 출력하는지 확인.
+- [ ] 시스템을 5분간 전원 투입 상태로 둔다. 각 보드 케이스를 만져본다 — (RPi CPU 부근은 정상) 예상 외의 온기 없음. 냄새 없음. 변색 없음.
 
-The last row is the lesson from the incident. A warm wire is a wire about to fail. Replace, do not observe.
+---
+
+## Step 4 — 문서화
+
+- [ ] 브레드보드의 GND 토폴로지를 촬영한다. `docs/photos/phase0_gnd.jpg`에 저장.
+- [ ] 날짜/시간과 함께 측정된 전압을 `docs/phase0_log.md`에 기록.
+- [ ] 교체된 선과 그 이유를 기록한다.
+
+---
+
+## 사인오프
+
+위의 모든 체크박스가 표시되고, 로그가 커밋되고, 사진이 저장소에 있을 때 Phase 0가 완료된다. **이 커밋이 존재하기 전까지 Phase 1을 시작할 수 없다.**
+
+어떤 확인이 실패하면, 우회하지 않는다. 멈추고, 원인을 찾고, 원인을 수정하고, 영향받은 보드의 Step 1부터 Phase 0를 다시 시작한다.
+
+---
+
+## 주의해야 할 실패 모드
+
+이전 경험과 CAN 버스 문헌에서 추출.
+
+| 증상 | 예상 원인 | 조치 |
+|------|-----------|------|
+| 보드 부팅되지만 UART 무음 | TX/RX 교환, 또는 보레이트 불일치 | 핀맵 확인, CubeMX 보레이트 설정 검증 |
+| LED 점멸 속도 변동 | HSI vs HSE 클럭 잘못 설정 | `.ioc`의 RCC 설정 확인 |
+| GND 간 전압 > 50mV | 접지 루프 또는 불량 연결 | GND 선 재연결, 데이지 체인 확인 |
+| 전원 투입 시 보드 따뜻함 | 가능한 단락, 전류 측정 | **즉시 전원 차단**, 점검 |
+| UART 시작 시에만 깨짐 | 부팅 핀 플로팅, 또는 BOOT0 잘못 연결 | BOOT0가 GND에 연결되었는지 확인 |
+| 정상 작동 중 선 따뜻함 | 규격 미달 도체 또는 부분 단선 | **선 교체**, "모니터링"하지 말 것 |
+
+마지막 행이 사고에서 얻은 교훈이다. 따뜻한 선은 곧 실패할 선이다. 관찰하지 말고 교체한다.

@@ -1,111 +1,111 @@
-# Lessons Learned
+# 교훈
 
-A retrospective on two hardware incidents that shaped this repository's operating principles. Written in post-mortem format — facts first, attribution second, blame nowhere.
-
----
-
-## Incident 1 — RPi GPIO Damage from Battery Wire Detachment
-
-**Project:** Neuro-Drive (parent project), early phase
-**Component lost:** Raspberry Pi GPIO bank (board recovered, GPIO partially unusable)
-
-### What happened
-
-A 7.4V LiPo battery wire detached during operation and contacted the Raspberry Pi's 3.3V GPIO header. The voltage differential exceeded the GPIO's tolerance and damaged several pins. The board continued to boot, but specific GPIO functions were permanently lost.
-
-### Root cause
-
-A single-point mechanical failure (loose battery terminal) had no electrical isolation barrier between it and a sensitive 3.3V logic domain. The system was designed to work; it was not designed to fail safely.
-
-### What was assumed
-
-- That the battery wire would stay attached because it had stayed attached so far.
-- That a wire making unintended contact with a GPIO pin was an unlikely enough scenario to ignore.
-- That the cost of adding physical isolation outweighed the risk.
-
-Each assumption was reasonable in isolation. None of them survived contact with the actual operating environment.
-
-### Corrective action taken
-
-The architecture was redesigned to physically separate the high-voltage power domain from the logic domain. Subsequent phases (3 onward in the parent project) ran the RPi from regulated 5V via UBEC, with battery wiring routed entirely away from logic-level pins. The GPIO was treated as a fragile resource, not a free-form interface.
-
-### Lesson encoded into this repo
-
-> **Voltage domains do not respect intent. They respect physical layout.**
-> Until the bus is fully understood, this repo runs on bench/USB power only. No battery integration is planned within Phase 0–5.
+이 저장소의 운영 원칙을 형성한 두 가지 하드웨어 사고에 대한 회고. 사후 분석 형식으로 작성 — 사실 먼저, 귀책 두 번째, 책임 전가는 없다.
 
 ---
 
-## Incident 2 — Servo Stall and GND Jumper Fire During F446RE Migration
+## 사고 1 — 배터리 선 분리로 인한 RPi GPIO 손상
 
-**Project:** Neuro-Drive (parent project), F411RE → F446RE migration
-**Date:** 2026-05-05
-**Components lost:** servo motor (assumed dead), L298N motor driver (assumed damaged)
-**Components survived:** RPi5, F446RE, F411RE
+**프로젝트:** Neuro-Drive (부모 프로젝트), 초기 단계  
+**손실 부품:** Raspberry Pi GPIO 뱅크 (보드는 복구됨, GPIO 일부 사용 불가)
 
-### Timeline
+### 발생 경위
 
-1. F446RE migration completed; firmware ported from F411RE; basic drive test passed.
-2. PWM frequency tuning attempted to address audible servo noise. New frequency settings flashed.
-3. On power-up with new firmware, servo emitted a continuous "buzz" but did not move. Power was not immediately cut. The condition persisted.
-4. Original F411RE firmware was reflashed onto a re-wired F411RE setup. DC motor responded normally; servo did not move.
-5. The L298N-to-servo GND jumper wire ignited. Power was cut.
-6. Post-incident inspection: servo unresponsive on bench, GND jumper visibly burnt, L298N suspected damaged.
+운용 중 7.4V LiPo 배터리 선이 분리되어 Raspberry Pi의 3.3V GPIO 헤더에 접촉했다. 전압 차이가 GPIO의 허용 범위를 초과하여 여러 핀이 손상되었다. 보드는 계속 부팅되었지만, 특정 GPIO 기능이 영구적으로 상실되었다.
 
-### Direct cause
+### 근본 원인
 
-A GND jumper wire — repeatedly bent, flexed, and re-seated across multiple migrations — had developed internal strand breakage. Its continuity tested intact when checked, but its current-carrying capacity had degraded. When the servo entered an abnormal state (stall, drawing higher-than-normal current with no rotation), the weakened GND wire became the thermal failure point.
+단일 장애점인 기계적 결함(느슨한 배터리 단자)과 민감한 3.3V 로직 도메인 사이에 전기적 절연 장벽이 없었다. 시스템은 작동하도록 설계되었다; 안전하게 실패하도록 설계되지는 않았다.
 
-### Root cause
+### 가정했던 것
 
-Two unverified assumptions were held simultaneously, and they masked each other:
+- 배터리 선은 지금까지 붙어 있었으니 계속 붙어 있을 것이다.
+- GPIO 핀에 선이 의도치 않게 접촉하는 시나리오는 무시해도 될 만큼 가능성이 낮다.
+- 물리적 절연 추가 비용이 위험보다 크다.
 
-1. **The PWM signal is correct** — based on register values matching documentation.
-2. **The hardware is good** — based on having worked yesterday.
+각각의 가정은 개별적으로는 합리적이었다. 실제 운용 환경과 맞닥뜨리자 하나도 살아남지 못했다.
 
-When the servo failed to move, attention focused on assumption (1): firmware was rolled back, registers were re-checked, the `.ioc` was reviewed. Throughout this, the hardware was implicitly trusted because it had recently worked. The actual fault was in (2): a wire that had silently degraded over weeks of repeated handling.
+### 취해진 수정 조치
 
-The fire was not the failure. The fire was the symptom of a failure that had already happened — minutes earlier, when the buzzing servo was not immediately disconnected.
+아키텍처가 고전압 전원 도메인과 로직 도메인을 물리적으로 분리하도록 재설계되었다. 이후 단계(부모 프로젝트의 Phase 3 이후)에서는 UBEC를 통한 조정된 5V로 RPi를 구동하고, 배터리 배선은 로직 레벨 핀에서 완전히 멀리 배선되었다. GPIO는 자유롭게 쓸 수 있는 인터페이스가 아닌 취약한 자원으로 취급되었다.
 
-### What should have happened
+### 이 저장소에 반영된 교훈
 
-At step 3 of the timeline, the servo's behavior — sound without motion — was a **signature of a stalled actuator drawing abnormal current**. Standard practice in motor systems is to cut power within seconds of observing this state. Continued power application turns a recoverable fault into a destructive one.
-
-### Corrective actions encoded into this repo
-
-| Action | Where it lives in this repo |
-|--------|-----------------------------|
-| Verify power and GND continuity before any signal-layer work | [`docs/phase0_checklist.md`](phase0_checklist.md) — entire Phase 0 |
-| Replace any wire that has been bent or flexed across migrations | Phase 0 checklist, Step 2 |
-| Cut power immediately on abnormal sound or heat without expected motion | Operating Principle #2 in main `README.md` |
-| Add only one new layer at a time | Operating Principle #3; Phase 2 deliberately omits MCP2515 |
-| Branch before any migration | Operating Principle #4 |
-| Run on bench/USB power until bus is verified | `README.md` Hardware section, "No battery in this repo" |
+> **전압 도메인은 의도를 존중하지 않는다. 물리적 배치를 존중한다.**
+> 버스가 완전히 이해될 때까지, 이 저장소는 벤치/USB 전원만 사용한다. Phase 0–5 내에서는 배터리 통합이 계획되어 있지 않다.
 
 ---
 
-## Cross-cutting Observations
+## 사고 2 — F446RE 마이그레이션 중 서보 스톨 및 GND 점퍼 화재
 
-Two incidents, separated by months, share a common shape:
+**프로젝트:** Neuro-Drive (부모 프로젝트), F411RE → F446RE 마이그레이션  
+**날짜:** 2026-05-05  
+**손실 부품:** 서보 모터 (추정 사망), L298N 모터 드라이버 (추정 손상)  
+**생존 부품:** RPi5, F446RE, F411RE
 
-1. **An assumption held at the system level was not verified at the physical level.** In Incident 1, the assumption was mechanical (the wire will stay). In Incident 2, the assumption was electrical (the wire still conducts). Both were treated as true because they had been true.
+### 타임라인
 
-2. **The failure was not where attention was focused.** Incident 1's investigation initially looked at firmware behavior on the GPIO; the cause was a battery terminal nowhere near the affected pin. Incident 2's investigation focused on PWM registers; the cause was a jumper wire's internal strand integrity.
+1. F446RE 마이그레이션 완료; F411RE에서 펌웨어 포팅; 기본 주행 테스트 통과.
+2. 서보 소음 해결을 위해 PWM 주파수 튜닝 시도. 새 주파수 설정 플래시.
+3. 새 펌웨어로 전원 인가 시, 서보에서 지속적인 "버즈" 소리가 났지만 움직이지 않았다. 전원을 즉시 차단하지 않았다. 상태가 지속되었다.
+4. 원래 F411RE 펌웨어를 재배선된 F411RE 설정에 리플래시. DC 모터는 정상 반응; 서보는 움직이지 않았다.
+5. L298N-서보 GND 점퍼 선에 불이 붙었다. 전원 차단.
+6. 사고 후 점검: 서보 벤치에서 무반응, GND 점퍼 육안으로 탄 흔적, L298N 손상 추정.
 
-3. **The cost of a 30-second physical check was orders of magnitude lower than the cost of skipping it.** Both incidents could have been prevented by a multimeter or a visual inspection that took less time than reading this paragraph.
+### 직접 원인
 
-The discipline encoded into this repo's Phase 0 is not about being thorough. It is about acknowledging that **systems engineers who skip physical verification eventually pay for the time they saved, with interest.**
+여러 번의 마이그레이션에 걸쳐 반복적으로 구부러지고, 휘어지고, 재연결된 GND 점퍼 선의 내부 가닥이 끊어져 있었다. 점검 시 연속성은 정상으로 나왔지만, 전류 운반 용량이 저하되어 있었다. 서보가 비정상 상태(스톨, 회전 없이 과전류)에 들어갔을 때, 약해진 GND 선이 열적 실패 지점이 되었다.
+
+### 근본 원인
+
+두 가지 미검증 가정이 동시에 유지되며 서로를 가렸다:
+
+1. **PWM 신호가 올바르다** — 레지스터 값이 문서와 일치하는 것에 근거.
+2. **하드웨어가 양호하다** — 어제까지 작동했다는 것에 근거.
+
+서보가 움직이지 않자, 관심은 가정 (1)에 집중되었다: 펌웨어 롤백, 레지스터 재확인, `.ioc` 검토. 그동안 하드웨어는 최근까지 작동했기 때문에 암묵적으로 신뢰받았다. 실제 결함은 (2)에 있었다: 수 주간의 반복 취급으로 조용히 저하된 선.
+
+화재는 실패가 아니었다. 화재는 이미 발생한 실패의 증상이었다 — 몇 분 전, 버즈 소리를 내는 서보의 전원을 즉시 차단하지 않았을 때.
+
+### 일어났어야 했던 것
+
+타임라인의 3번 단계에서, 서보의 동작 — 움직임 없이 소리만 남 — 은 **스톨된 액추에이터가 비정상 전류를 끌어당기는 신호**였다. 모터 시스템의 표준 관행은 이 상태를 관찰한 지 몇 초 이내에 전원을 차단하는 것이다. 전원 인가를 계속하면 회복 가능한 결함이 파괴적인 결함으로 변한다.
+
+### 이 저장소에 반영된 수정 조치
+
+| 조치 | 이 저장소에서의 위치 |
+|------|---------------------|
+| 신호 레이어 작업 전에 전원과 GND 연속성 검증 | [`docs/phase0_checklist.md`](phase0_checklist.md) — Phase 0 전체 |
+| 마이그레이션에 걸쳐 구부러지거나 휘어진 선 교체 | Phase 0 체크리스트, Step 2 |
+| 예상 동작 없이 비정상 소리나 열이 발생하면 즉시 전원 차단 | 메인 `README.md`의 운영 원칙 #2 |
+| 한 번에 하나의 새 레이어만 추가 | 운영 원칙 #3; Phase 2는 의도적으로 MCP2515 제외 |
+| 마이그레이션 전에 브랜치 생성 | 운영 원칙 #4 |
+| 버스 검증 완료까지 벤치/USB 전원으로만 운용 | `README.md` 하드웨어 섹션, "이 저장소에는 배터리 없음" |
 
 ---
 
-## Personal Reflection
+## 공통 관찰
 
-There is a temptation, after losing hardware, to either over-explain the loss or to bury it. Neither is useful. The loss happened because I trusted layers I had not personally verified. The servo's buzzing went on for too long because I was busy looking at code, and code does not buzz.
+두 사고, 수개월 간격, 동일한 패턴을 공유한다:
 
-What I keep from these incidents is not a checklist — checklists exist in the other documents. What I keep is a habit: when something I am working on starts behaving in a way I cannot immediately explain, the next action is not to investigate. The next action is to remove energy from the system. Investigation comes after the smoke does not.
+1. **시스템 레벨에서 유지된 가정이 물리 레벨에서 검증되지 않았다.** 사고 1의 가정은 기계적(선이 유지될 것이다)이었다. 사고 2의 가정은 전기적(선이 여전히 전류를 흘릴 것이다)이었다. 둘 다 사실이었기 때문에 사실로 취급되었다.
 
-That habit is the only thing that separates the next incident from the last one.
+2. **실패는 관심이 집중된 곳에 있지 않았다.** 사고 1의 조사는 처음에 GPIO의 펌웨어 동작을 살폈다; 원인은 영향받은 핀과는 전혀 관계없는 배터리 단자였다. 사고 2의 조사는 PWM 레지스터에 집중했다; 원인은 점퍼 선의 내부 가닥 온전성이었다.
+
+3. **30초짜리 물리적 점검 비용은 이를 건너뛴 비용보다 몇 자릿수나 낮았다.** 두 사고 모두 이 문단을 읽는 데 걸리는 시간보다 짧은 멀티미터 또는 육안 검사로 예방할 수 있었다.
+
+이 저장소의 Phase 0에 반영된 규율은 철저함에 관한 것이 아니다. 그것은 **물리적 검증을 건너뛴 시스템 엔지니어는 절약한 시간에 대한 대가를, 이자까지 붙여서 치르게 된다**는 사실을 인정하는 것이다.
 
 ---
 
-*This document is intentionally public. The repository it lives in is built around the assumption that future readers — including future me — will benefit more from honesty about what failed than from a polished narrative of success.*
+## 개인적 반성
+
+하드웨어를 잃고 나면, 그 손실을 지나치게 설명하거나 묻어버리려는 유혹이 생긴다. 둘 다 유용하지 않다. 손실은 내가 직접 검증하지 않은 레이어를 신뢰했기 때문에 일어났다. 버즈 소리를 내는 서보가 너무 오래 방치된 것은, 내가 코드를 들여다보느라 바빴기 때문이다. 코드는 버즈 소리를 내지 않는다.
+
+이 사고들에서 내가 가져가는 것은 체크리스트가 아니다 — 체크리스트는 다른 문서에 있다. 내가 가져가는 것은 습관이다: 작업 중인 것이 즉시 설명할 수 없는 방식으로 동작하기 시작하면, 다음 행동은 조사가 아니다. 다음 행동은 시스템에서 에너지를 제거하는 것이다. 조사는 연기가 나지 않은 후에 한다.
+
+그 습관이 다음 사고와 마지막 사고를 구분하는 유일한 것이다.
+
+---
+
+*이 문서는 의도적으로 공개되어 있다. 이 문서가 속한 저장소는, 미래의 독자들 — 미래의 나 자신을 포함하여 — 이 성공의 세련된 서사보다 무엇이 실패했는지에 대한 솔직함에서 더 많은 것을 얻을 것이라는 가정 아래 구성되었다.*
