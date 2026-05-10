@@ -1,6 +1,6 @@
 # 크로스 플랫폼 워크플로
 
-이 저장소가 두 기기에서 개발되는 방식:
+이 repository가 두 기기에서 개발되는 방식:
 
 - **외부 (Ubuntu)** — 코드 편집, 문서화, git 작업, 프로토콜 설계
 - **집 (Windows + STM32CubeIDE)** — `.ioc` 설정, 빌드, 플래시, 디버그
@@ -104,7 +104,7 @@ sudo apt install gcc-arm-none-eabi
 
 이를 통해 Ubuntu에서 compile error와 `.bin` output을 얻을 수 있다. 플래시와 디버그에는 Ubuntu에서 `openocd` + ST-Link 드라이버를 설정하지 않는 한 집 기기가 여전히 필요하다.
 
-**권장:** 위의 워크플로가 편해질 때까지 이를 건너뛴다. 기본 git flow가 안정적이기 전에 두 번째 toolchain을 추가하는 것은 이 저장소가 피하도록 구성된 "한 번에 두 개의 새 레이어" anti-pattern 그 자체다.
+**권장:** 위의 워크플로가 편해질 때까지 이를 건너뛴다. 기본 git flow가 안정적이기 전에 두 번째 toolchain을 추가하는 것은 이 repository가 피하도록 구성된 "한 번에 두 개의 새 레이어" anti-pattern 그 자체다.
 
 ---
 
