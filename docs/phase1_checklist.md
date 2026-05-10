@@ -23,7 +23,7 @@ Phase 1이 통과되면 다음이 보장된다:
 
 - F446RE 보드 한 대 (Phase 0 sign-off 완료된 보드)
 - 검증된 USB 케이블
-- ST-Link 가상 COM 포트로 접속 가능한 시리얼 모니터 (PuTTY, Tera Term, `screen`, CubeIDE 내장 콘솔 등)
+- ST-Link 가상 COM 포트로 접속 가능한 시리얼 모니터 (PuTTY, Tera Term, `screen`, CubeIDE 내장 콘솔 등, 나는 Tera Term 5 사용)
 - 멀티미터 (이번 단계에서는 사용하지 않을 예정이지만, 보드가 따뜻해지면 즉시 측정해야 하므로 손이 닿는 곳에 둔다)
 
 **명시적 제외:** MCP2551 트랜시버, F411RE, RPi5, CAN_H/CAN_L 배선, 종단 저항. Phase 1은 단일 보드 단독 검증이다.
