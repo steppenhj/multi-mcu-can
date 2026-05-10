@@ -188,6 +188,10 @@ sudo apt install can-utils python3-pip
 # 다음 단계로 넘어가기 전에 각 보드의 UART 출력을 독립적으로 확인
 ```
 
+**F446RE Phase 0 UART 출력 확인 (TeraTerm):**
+
+![F446RE Phase 0 UART](docs/captures/F446RE_Phase0.png)
+
 멀티미터/연속성 확인 절차는 [`docs/phase0_checklist.md`](docs/phase0_checklist.md) 참조.
 
 ### Phase 3 — 3노드 버스 (RPi 참여)
