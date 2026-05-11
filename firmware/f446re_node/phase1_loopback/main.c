@@ -18,12 +18,14 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "can.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,7 +46,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+uint32_t tx_count = 0;
+uint32_t rx_count = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -88,7 +91,47 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
+
+  /* --- 단계별 반환값 저장 --- */
+  HAL_StatusTypeDef filter_status;
+  HAL_StatusTypeDef start_status;
+
+  /* --- CAN 필터 --- */
+  CAN_FilterTypeDef filter = {0};
+  filter.FilterBank          = 0;
+  filter.FilterMode          = CAN_FILTERMODE_IDMASK;
+  filter.FilterScale         = CAN_FILTERSCALE_32BIT;
+  filter.FilterIdHigh        = 0x0000;
+  filter.FilterIdLow         = 0x0000;
+  filter.FilterMaskIdHigh    = 0x0000;
+  filter.FilterMaskIdLow     = 0x0000;
+  filter.FilterFIFOAssignment = CAN_RX_FIFO0;
+  filter.FilterActivation    = ENABLE;
+  filter.SlaveStartFilterBank = 14;
+  filter_status = HAL_CAN_ConfigFilter(&hcan1, &filter);
+
+  /* --- CAN Start --- */
+  /* Start 전 상태 확인 */
+  char pre_msg[80];
+  int pre_len = snprintf(pre_msg, sizeof(pre_msg),
+      "[PRE-START] state=%lu err=0x%lX\r\n",
+      (uint32_t)HAL_CAN_GetState(&hcan1),
+      HAL_CAN_GetError(&hcan1));
+  HAL_UART_Transmit(&huart2, (uint8_t*)pre_msg, pre_len, 100);
+
+  start_status = HAL_CAN_Start(&hcan1);
+
+  /* Start 후 상태 확인 */
+  char post_msg[80];
+  int post_len = snprintf(post_msg, sizeof(post_msg),
+      "[POST-START] start=%d state=%lu err=0x%lX\r\n",
+      start_status,
+      (uint32_t)HAL_CAN_GetState(&hcan1),
+      HAL_CAN_GetError(&hcan1));
+  HAL_UART_Transmit(&huart2, (uint8_t*)post_msg, post_len, 100);
+
   uint32_t last_tick = 0;
   uint8_t led_state = 0;
   /* USER CODE END 2 */
@@ -97,19 +140,50 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
 	  uint32_t now = HAL_GetTick();
 	  if(now - last_tick >= 500){
 		  last_tick = now;
 		  led_state = !led_state;
 		  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, led_state);
 
-		  char msg[48];
-		  int len = snprintf(msg, sizeof(msg), "[F446RE] alive, t=%lums\r\n", now);
+		  /* -- TX --- */
+		  CAN_TxHeaderTypeDef tx_header = {0};
+		  tx_header.StdId	= 0x123;
+		  tx_header.IDE 	= CAN_ID_STD;
+		  tx_header.RTR 	= CAN_RTR_DATA;
+		  tx_header.DLC 	= 8;
+		  uint8_t tx_data[8];
+		  memcpy(tx_data, &tx_count, 4); //카운터를 페이로드에 실음
+		  memset(tx_data + 4, 0xAA, 4);
+
+		  uint32_t mailbox;
+		  HAL_StatusTypeDef tx_status = HAL_CAN_AddTxMessage(&hcan1, &tx_header, tx_data, &mailbox); //반환값 저장
+		  if(tx_status == HAL_OK){
+			  tx_count++;
+		  }
+
+		  uint32_t err = HAL_CAN_GetError(&hcan1);  //에러코드 가져오기
+		  uint32_t state = HAL_CAN_GetState(&hcan1); // 상태 가져오기
+
+		  /* --- RX 폴링 --- */
+		  if(HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) > 0){
+			  CAN_RxHeaderTypeDef rx_header;
+			  uint8_t rx_data[8];
+			  if(HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &rx_header, rx_data) == HAL_OK){
+				  rx_count++;
+			  }
+		  }
+
+		  // UART 출력
+		  char msg[128];
+		  int len = snprintf(msg, sizeof(msg), "[F446RE] tx=%lu rx=%lu st=%d err=0x%lX state=%lu t=%lums\r\n",
+				  tx_count, rx_count, tx_status, err, state, now);
 		  HAL_UART_Transmit(&huart2, (uint8_t*)msg, len, 100);
 	  }
+
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
