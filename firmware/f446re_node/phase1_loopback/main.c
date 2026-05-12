@@ -94,19 +94,6 @@ int main(void)
   MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
 
-  /* === PA11(CAN_RX) Pull-up 강제 적용 === */
-  /* CubeMX 기본값이 No pull이라, 트랜시버 없는 Loopback에서 */
-  /* RX 핀이 플로팅 -> INAK 클리어 타임아웃 가설 검증   */
-  {
-	  GPIO_InitTypeDef rx_init = {0};
-	  rx_init.Pin	= GPIO_PIN_11;
-	  rx_init.Mode 	= GPIO_MODE_AF_PP;
-	  rx_init.Pull 	= GPIO_PULLUP;
-	  rx_init.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-	  rx_init.Alternate = GPIO_AF9_CAN1;
-	  HAL_GPIO_Init(GPIOA, &rx_init);
-  }
-
   /* --- 단계별 반환값 저장 --- */
   HAL_StatusTypeDef filter_status;
   HAL_StatusTypeDef start_status;
@@ -127,6 +114,11 @@ int main(void)
 
   /* --- CAN Start --- */
   /* Start 전 상태 확인 */
+  char filter_msg[80];
+  int filter_len = snprintf(filter_msg, sizeof(filter_msg),
+      "[FILTER] status=%d\r\n", filter_status);
+  HAL_UART_Transmit(&huart2, (uint8_t*)filter_msg, filter_len, 100);
+
   char pre_msg[80];
   int pre_len = snprintf(pre_msg, sizeof(pre_msg),
       "[PRE-START] state=%lu err=0x%lX\r\n",
