@@ -1,6 +1,6 @@
 # Phase 1 — bxCAN Loopback Verification Log
 
-![Phase 1 Tera Term 캡쳐](docs/captures/F446RE_Phase1.png)
+![Phase 1 Tera Term 캡쳐](../../assets/captures/F446RE_Phase1.png)
 
 ## 결과
 

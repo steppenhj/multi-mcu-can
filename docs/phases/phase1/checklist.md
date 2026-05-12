@@ -79,7 +79,7 @@ Phase 0 베이스라인이 깨져 있다면, Phase 1로 진입하지 않는다. 
 
 ## Step 2 — phase1_loopback 프로젝트 생성
 
-`firmware/f446re_node/phase1_loopback/`에 새 프로젝트를 생성한다. **`phase0_alive`를 복사하지 않는다** — Phase 0를 그대로 보존하기 위함. ([`ioc_f446re_phase1.md`](ioc_f446re_phase1.md) Step 1 참조)
+`firmware/f446re_node/phase1_loopback/`에 새 프로젝트를 생성한다. **`phase0_alive`를 복사하지 않는다** — Phase 0를 그대로 보존하기 위함. ([`ioc_f446re_phase1.md`](ioc_f446re.md) Step 1 참조)
 
 - [ ] STM32CubeIDE → File → New → STM32 Project → Board Selector → NUCLEO-F446RE.
 - [ ] Project Name: `phase1_loopback`. Location: `firmware/f446re_node/phase1_loopback/`.
@@ -90,7 +90,7 @@ Phase 0 베이스라인이 깨져 있다면, Phase 1로 진입하지 않는다. 
 
 ## Step 3 — 클럭, GPIO, USART2 설정 (Phase 0와 동일)
 
-[`ioc_f446re_phase1.md`](ioc_f446re_phase1.md) Step 2 참조. 모든 설정은 Phase 0의 `phase0_alive`와 동일해야 한다.
+[`ioc_f446re_phase1.md`](ioc_f446re.md) Step 2 참조. 모든 설정은 Phase 0의 `phase0_alive`와 동일해야 한다.
 
 - [ ] RCC: HSE = **BYPASS Clock Source**.
 - [ ] Clock Configuration 탭: SYSCLK = **180 MHz**, **APB1 = 45 MHz**, APB2 = 90 MHz.
@@ -106,7 +106,7 @@ Phase 0 베이스라인이 깨져 있다면, Phase 1로 진입하지 않는다. 
 
 ## Step 4 — CAN1 페리퍼럴 활성화 및 설정
 
-[`ioc_f446re_phase1.md`](ioc_f446re_phase1.md) Step 3, 4, 5 참조. 비트 타이밍 값이 정확히 일치해야 한다.
+[`ioc_f446re_phase1.md`](ioc_f446re.md) Step 3, 4, 5 참조. 비트 타이밍 값이 정확히 일치해야 한다.
 
 ### 4-1. Mode
 
@@ -175,7 +175,7 @@ Pinout view에서 확인:
 
 ## Step 7 — USER CODE 작성
 
-[`ioc_f446re_phase1.md`](ioc_f446re_phase1.md) Step 9의 골격을 USER CODE 블록에 작성한다.
+[`ioc_f446re_phase1.md`](ioc_f446re.md) Step 9의 골격을 USER CODE 블록에 작성한다.
 
 - [ ] `USER CODE BEGIN Includes`에 `#include <stdio.h>`, `#include <string.h>` 추가.
 - [ ] `USER CODE BEGIN PV`에 `tx_count`, `rx_count` 전역 변수 선언.

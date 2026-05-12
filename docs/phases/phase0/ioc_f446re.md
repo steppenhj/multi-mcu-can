@@ -203,4 +203,4 @@ while (1)
 검증: 빌드 성공 + LED 1Hz + 터미널에서 "[F446RE] alive, t=Xms" 1초마다 출력
 ```
 
-Phase 0 sign-off 기준은 [`phase0_checklist.md`](phase0_checklist.md) 참조.
+Phase 0 sign-off 기준은 [`checklist.md`](checklist.md) 참조.

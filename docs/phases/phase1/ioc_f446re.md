@@ -39,7 +39,7 @@ STM32CubeIDE → File → New → STM32 Project
 
 ## 2. RCC, SYS, GPIO, USART2 — Phase 0와 동일
 
-이 항목들은 [`ioc_f446re_phase0.md`](ioc_f446re_phase0.md)의 Step 3, 4, 5, 6을 그대로 따른다.
+이 항목들은 [`phase0/ioc_f446re.md`](../phase0/ioc_f446re.md)의 Step 3, 4, 5, 6을 그대로 따른다.
 
 요약:
 
@@ -236,7 +236,7 @@ Generate Code 직후 다음을 확인:
 
 ## 9. USER CODE 작성 가이드 (설정 후 작성)
 
-`.ioc` 설정 완료 후 USER CODE 블록에 작성할 핵심 골격. 실제 코드는 `app_can_loop.c/h`에 분리하는 것을 권장 ([workflow.md](../workflow.md) 참조).
+`.ioc` 설정 완료 후 USER CODE 블록에 작성할 핵심 골격. 실제 코드는 `app_can_loop.c/h`에 분리하는 것을 권장 ([workflow.md](../../workflow.md) 참조).
 
 **필요한 것 4가지:**
 
@@ -335,4 +335,4 @@ while (1)
 검증: 빌드 OK + LED 1Hz + UART에서 tx/rx 카운터가 같이 증가
 ```
 
-Phase 1 sign-off 기준은 [`phase1_checklist.md`](phase1_checklist.md) 참조.
+Phase 1 sign-off 기준은 [`checklist.md`](checklist.md) 참조.

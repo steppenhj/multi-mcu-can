@@ -75,7 +75,7 @@
 
 | 조치 | 이 repository에서의 위치 |
 |------|---------------------|
-| 신호 레이어 작업 전에 전원과 GND 연속성 검증 | [`docs/phase0_checklist.md`](phase0_checklist.md) — Phase 0 전체 |
+| 신호 레이어 작업 전에 전원과 GND 연속성 검증 | [`docs/phases/phase0/checklist.md`](phases/phase0/checklist.md) — Phase 0 전체 |
 | 마이그레이션에 걸쳐 구부러지거나 휘어진 선 교체 | Phase 0 checklist, Step 2 |
 | 예상 동작 없이 비정상 소리나 열이 발생하면 즉시 전원 차단 | 메인 `README.md`의 운영 원칙 #2 |
 | 한 번에 하나의 새 레이어만 추가 | 운영 원칙 #3; Phase 2는 의도적으로 MCP2515 제외 |
