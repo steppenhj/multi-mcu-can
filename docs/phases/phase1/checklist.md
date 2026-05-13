@@ -248,13 +248,92 @@ bxCAN 학습 과정에서 자주 마주치는 함정.
 
 ---
 
+---
+
+## 검증 결과 기록
+
+> **2026-05-12 완료.** 아래는 실제 검증에서 사용한 최종 설정과 디버깅 과정이다.
+
+![Phase 1 Tera Term 캡쳐](../../assets/captures/F446RE_Phase1.png)
+
+### 최종 설정
+
+| 항목 | 값 | 위치 |
+|------|-----|------|
+| Operating Mode | Loopback | `.ioc` → CAN1 Parameter Settings |
+| Prescaler | 9 | `.ioc` |
+| Time Quanta in BS1 | 8 TQ | `.ioc` |
+| Time Quanta in BS2 | 1 TQ | `.ioc` |
+| SJW | 1 TQ | `.ioc` |
+| AutoRetransmission | DISABLE | `.ioc` |
+| 필터 0 | Catch-all (Mask=0, ID=0), FIFO0 | `main.c` USER CODE 2 |
+| PA11 (CAN_RX) Pull | **PULLUP** | `can.c` `HAL_CAN_MspInit` USER CODE 1 |
+| PA12 (CAN_TX) Pull | NOPULL | `can.c` (CubeMX 기본값) |
+
+비트레이트 검산: APB1 = 45 MHz, TQ 총합 = 1 + 8 + 1 = 10, Prescaler = 9 → 45,000,000 / (9 × 10) = **500,000 bps**.
+
+> rx가 tx보다 항상 1 뒤처지는 이유: 루프 구조가 `TX → RX 폴링` 순서라 첫 사이클에서는 FIFO가 비어있음. 다음 사이클부터 직전 프레임이 빠진다. 정상 동작 시 `tx - rx = 1` 유지 — 페리퍼럴이 아니라 폴링 타이밍의 결과.
+
+### 디버깅 중 마주친 함정
+
+**1. CubeMX GUI는 AF 핀의 Pull 설정을 받지 않는다**
+
+- **증상**: `.ioc`에서 PA11 Pull-up 드롭다운을 바꿔도 재생성된 `HAL_CAN_MspInit` 안에서 `GPIO_NOPULL` 그대로.
+- **원인**: CubeMX는 AF 모드 핀에 대해 Pull 설정을 무시하는 정책. STM32 HW 한계가 아니라 CubeMX 정책.
+- **해결**: 해당 페리퍼럴의 `HAL_..._MspInit` USER CODE 블록에서 `HAL_GPIO_Init`을 다시 호출해 Pull만 덮어쓴다.
+
+**2. `HAL_CAN_Start` 타임아웃과 RX 핀 floating**
+
+- **증상**: `HAL_CAN_Start` 반환값 = 1 (HAL_ERROR), err = 0x20000 (NOT_INITIALIZED).
+- **원인**: bxCAN이 Init → Normal 전환 시 **버스에서 11개 연속 recessive 비트 감지**가 필요. LOOPBACK 모드라도 이 단계는 RX 핀 물리 레벨을 본다. Floating이면 타임아웃.
+- **해결**: PA11에 풀업 적용 (함정 1과 연결).
+- **잘못된 직관**: "LOOPBACK은 내부 경로만 쓰니 RX 핀 무관" — 틀림. 모드 전환 단계는 RX 핀을 본다.
+
+**3. BS1=1, BS2=1은 에러 없이도 RX 실패한다**
+
+- **증상**: `tx_count` 증가, `err = 0x0`, 그런데 `rx_count = 0`.
+- **이전 설정**: Prescaler=16, BS1=1, BS2=1 → 3 TQ, 937.5 kbps, 샘플 포인트 66.7%.
+- **원인**: 3 TQ는 Reference Manual 권장(8~25 TQ) 밖. 내부 RX 경로에서도 비트 재구성 불안정. LOOPBACK이라 에러 카운터에 안 잡힘.
+- **해결**: BS1=8, BS2=1 → 10 TQ, 샘플 포인트 90%.
+
+**4. CubeMX의 파라미터 회귀**
+
+- **증상**: 비트 타이밍만 바꿨는데 재생성된 `can.c`에서 `Mode = CAN_MODE_NORMAL`로 복귀.
+- **원인**: CubeMX가 같은 페리퍼럴의 한 파라미터 변경 시 다른 파라미터를 기본값으로 리셋하는 알려진 거동.
+- **해결**: `.ioc` 수정 후 항상 생성된 코드의 diff를 확인. 한 번에 한 파라미터만 바꾼다.
+
+**5. 풀업 코드의 위치 — `main.c` vs `MspInit`**
+
+- `main.c` USER CODE 2에 배치 → 동작은 하지만 응집도 나쁨.
+- `can.c` `HAL_CAN_MspInit` USER CODE 1로 이동 → CAN 관련 설정이 한 파일에, 재생성에서 보존, Phase 2 트랜시버 연결 시 한 블록만 수정하면 됨.
+- **결론**: 페리퍼럴 종속 GPIO 보정은 해당 페리퍼럴의 MspInit 안이 정답.
+
+### 진단 절차
+
+`HAL_CAN_Start` 또는 RX 폴링이 의심될 때 UART로 찍어볼 순서:
+
+```
+[FILTER]     HAL_CAN_ConfigFilter 반환값
+[PRE-START]  state, err  (Start 직전)
+[POST-START] state, err  (Start 직후)
+[루프]       tx_status, err, state  (매 사이클)
+```
+
+| 출력 | 값 | 의미 |
+|------|-----|------|
+| `[POST-START] start=1 err=0x20000` | HAL_ERROR + NOT_INITIALIZED | INAK 클리어 실패 → RX 핀 floating 의심 |
+| `[POST-START] start=0 state=2 err=0x0` 인데 rx=0 | 페리퍼럴 OK | 비트 타이밍 의심 |
+| `err=0x60000` | NOT_INITIALIZED + NOT_STARTED 누적 | Start 실패 후 누적 패턴 |
+
+---
+
 ## Phase 2로 넘어가기 전 체크포인트
 
 Phase 1이 완료되어도 Phase 2는 즉시 시작하지 않는다. Phase 2 시작 전 별도로:
 
-- [ ] MCP2551 트랜시버 모듈 데이터시트 검토 (VCC, VSS, RXD, TXD, Rs, CANH, CANL 핀맵)
-- [ ] F446RE 측 트랜시버 배선도 작성 (PA12 → TXD, PA11 ← RXD, 5V → VCC, GND → VSS, Rs → GND)
+- [ ] SN65HVD230 트랜시버 모듈 데이터시트 검토 (VCC, GND, TXD, RXD, CANH, CANL 핀맵)
+- [ ] F446RE 측 트랜시버 배선도 작성 (PA12 → TXD, PA11 ← RXD, 3.3V → VCC, GND → GND)
 - [ ] F411RE Phase 0 sign-off 완료 (Phase 0 체크리스트 F411RE 항목)
-- [ ] 종단 저항(120Ω × 2) 위치 결정 — 버스의 양쪽 물리적 끝단
+- [ ] 종단 저항(120Ω × 2) 위치 결정 — SN65HVD230 모듈 내장 저항 활용, 버스 양쪽 끝단에 배치
 
 이 항목들은 Phase 2 체크리스트에서 다시 다뤄지지만, 미리 점검해 두면 Phase 2 진입 시 막힘 없이 진행할 수 있다.
