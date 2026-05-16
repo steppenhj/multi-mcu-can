@@ -60,7 +60,7 @@ Phase 1이 통과되면 다음이 보장된다:
 - ST-Link 가상 COM 포트로 접속 가능한 시리얼 모니터 (PuTTY, Tera Term, `screen`, CubeIDE 내장 콘솔 등, 나는 Tera Term 5 사용)
 - 멀티미터 (이번 단계에서는 사용하지 않을 예정이지만, 보드가 따뜻해지면 즉시 측정해야 하므로 손이 닿는 곳에 둔다)
 
-**명시적 제외:** MCP2551 트랜시버, F411RE, RPi5, CAN_H/CAN_L 배선, 종단 저항. Phase 1은 단일 보드 단독 검증이다.
+**명시적 제외:** SN65HVD230 트랜시버, MCP2515, F411RE, RPi5, CAN_H/CAN_L 배선, 종단 저항. Phase 1은 단일 보드 단독 검증이다.
 
 ---
 
@@ -225,7 +225,7 @@ Pinout view에서 확인:
 
 위의 모든 체크박스가 표시되고, 로그가 커밋되고, 30초 이상의 안정적인 tx==rx 동작이 관찰되었을 때 Phase 1이 완료된다. 
 
-이 커밋이 존재하기 전까지 **Phase 2(F446RE ↔ F411RE 직접 2노드 CAN, MCP2551 도입)를 시작할 수 없다.**
+이 커밋이 존재하기 전까지 **Phase 2(F446RE bxCAN + SN65HVD230 ↔ F411RE MCP2515 + TJA1050, 2노드 CAN)를 시작할 수 없다.**
 
 어떤 확인이 실패하면, 우회하지 않는다. Operating Mode를 Normal로 바꾸지 않는다. tx_count를 강제로 증가시키지 않는다. 멈추고, 원인을 찾고, `.ioc` 또는 USER CODE를 수정하고, Step 6부터 다시 시작한다.
 

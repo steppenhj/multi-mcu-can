@@ -17,8 +17,8 @@ CAN, FreeRTOS, 타이머 인터럽트 없음. 최소 구성.
 | SYSCLK 최대 | 180 MHz | **100 MHz** | 클럭 트리 전체 재계산 |
 | APB1 최대 | 45 MHz | **50 MHz** | Phase 1 비트 타이밍 분주 달라짐 |
 | APB2 최대 | 90 MHz | **100 MHz** | (Phase 0에선 무관) |
-| bxCAN | CAN1 + CAN2 | **CAN1만** | Phase 1·2 영향 없음 (어차피 CAN1만 사용) |
-| FDCAN 지원 | ✅ | ❌ | CAN-FD 마이그레이션 시 노드 교체 필요 |
+| bxCAN | CAN1 + CAN2 | **없음** | F411RE는 CAN 페리퍼럴 자체가 없다. Phase 1·2에서 MCP2515(SPI 외부 CAN 컨트롤러)로 대체. |
+| FDCAN 지원 | ❌ | ❌ | F446RE도 bxCAN(CAN 2.0)만 지원, FDCAN 없음. CAN-FD 마이그레이션 시 두 노드 모두 교체 필요. |
 | UART 라벨 | `[F446RE]` | **`[F411RE]`** | Phase 2 시리얼 동시 관찰 시 즉시 구분 |
 
 GPIO, USART2, SWD, NUCLEO 보드 레이아웃은 F446RE와 동일. 즉 클럭과 UART 라벨만 신경 쓰면 된다.
@@ -77,7 +77,7 @@ HSE = 8 MHz (ST-Link MCO)
 
 > **F446RE와의 비교:** F446RE는 APB1을 /4로 나눠 45 MHz를 만든다. F411RE는 SYSCLK 자체가 낮아서 /2로도 50 MHz 상한 내에 들어온다. CubeMX가 APB1 위반을 빨간색으로 표시하므로, 다른 분주비를 선택했다면 화면에서 즉시 보인다.
 >
-> **Phase 1 미리보기:** 이 APB1 = 50 MHz가 Phase 1 비트 타이밍의 입력이 된다. F446RE의 `Prescaler=9, BS1=8, BS2=1` 값을 그대로 가져오면 500 kbps가 아니라 약 555 kbps가 나와서, Phase 2에서 F446RE와 통신할 때 ACK 에러로 직행한다. (자세한 재계산은 문서 끝 "Phase 1 미리보기" 참조.)
+> **Phase 1 미리보기:** F411RE는 CAN 페리퍼럴이 없으므로 비트 타이밍 계산은 무의미하다. Phase 1에서 F411RE는 MCP2515(SPI 외부 CAN 컨트롤러)를 사용하며, 비트레이트는 MCP2515 내부 레지스터(CNF1/CNF2/CNF3)로 설정한다. APB1 값은 SPI 클럭 분주에만 관여한다. (자세한 내용은 문서 끝 "Phase 1 미리보기" 참조.)
 
 **HAL Timebase Source:** SysTick (기본값 유지).
 
@@ -140,7 +140,7 @@ DMA, 인터럽트 모두 비활성화. 폴링으로 충분.
 
 | 항목 | 이유 |
 |------|------|
-| CAN1 | Phase 1부터. 지금 켜면 Phase 1에서 추가한 것인지 Phase 0에서 실수로 켠 것인지 구분이 안 된다. |
+| SPI | Phase 1에서 MCP2515 연결 시 활성화. Phase 0에서 켜면 무엇이 켜진 이유인지 구분이 안 된다. |
 | FreeRTOS | Phase 0에 스케줄러 불필요. |
 | DMA | 폴링 UART로 충분. |
 | 추가 타이머(TIM2 등) | 1Hz 점멸은 `HAL_GetTick()` 기반 비교로 구현. |
@@ -226,50 +226,26 @@ Phase 0 sign-off 기준은 [`checklist.md`](checklist.md) F411RE 항목 참조.
 
 ---
 
-## Phase 1 미리보기 — 비트 타이밍 재계산
+## Phase 1 미리보기 — MCP2515 SPI 설정
 
-Phase 0 sign-off 직후 진입할 Phase 1에서 사용할 비트 타이밍 값.
-**F411RE는 APB1이 50 MHz이므로 F446RE 값을 그대로 쓸 수 없다.**
+F411RE는 CAN 페리퍼럴이 없다. Phase 1에서 F411RE의 CAN 통신은 **MCP2515(외부 SPI CAN 컨트롤러)**로 구현한다. F446RE의 bxCAN 내부 루프백과 달리, F411RE는 SPI ↔ MCP2515 ↔ TJA1050(MCP2515 모듈 내장) ↔ CAN 버스 경로를 거친다.
 
-### 목표
-- 비트레이트 = 500 kbps (Phase 2에서 F446RE와 일치시켜야 함)
-- 샘플 포인트 ≈ 87.5%
+### 하드웨어 구성
 
-### 계산
+| 역할 | 부품 | 연결 |
+|------|------|------|
+| SPI 마스터 | F411RE (STM32) | SPI1 또는 SPI2 |
+| CAN 컨트롤러 | MCP2515 (아이템 34 모듈) | SPI CS/SCK/MOSI/MISO |
+| CAN 트랜시버 | TJA1050 (MCP2515 모듈 내장) | CAN_H / CAN_L |
 
-```
-CAN_Clock = APB1 = 50 MHz
-50,000,000 / 500,000 = 100
-→ Prescaler × (1 + BS1 + BS2) = 100
-```
+> SN65HVD230(아이템 40)은 F411RE에 추가로 붙이지 않는다. TJA1050이 이미 모듈에 포함되어 있다.
 
-후보 분해:
+### MCP2515 연결 시 주의 사항
 
-| Prescaler | Total TQ | 샘플 포인트 후보 | 평가 |
-|-----------|----------|------------------|------|
-| 4 | 25 | BS1=21, BS2=3 → 88.0% | TQ 많음 (지터 여유 큼) |
-| **5** | **20** | **BS1=17, BS2=2 → 90.0%** | 권장 |
-| 10 | 10 | BS1=8, BS2=1 → 90.0% | **F446RE log.md와 동일한 형태** ← 채택 후보 |
+- **전압**: MCP2515 모듈은 5V 전원. F411RE SPI 핀은 3.3V. MOSI/SCK/CS는 F411RE 3.3V → MCP2515 5V 방향이라 문제없음(MCP2515 VIH ≈ 2.1V). MISO는 5V → 3.3V 방향이므로 F411RE 핀의 5V 내성 여부 확인 필요.
+- **비트레이트**: MCP2515 내부 발진기(또는 외부 크리스탈)로 비트 타이밍 설정. F446RE bxCAN과 동일하게 **500 kbps**로 맞춰야 한다.
+- **SPI 클럭**: MCP2515 최대 SPI 클럭 = 10 MHz. F411RE SPI 클럭을 그 이하로 설정.
 
-> **참고:** F446RE의 Phase 1 log.md 최종 설정은 `Prescaler=9, BS1=8, BS2=1, Total TQ=10` (APB1=45MHz 기준). F411RE에서 동일한 TQ 분배를 유지하려면 **Prescaler만 9 → 10으로 변경**하면 된다. 샘플 포인트 90%가 같고, "두 노드의 비트 시간 구조가 같다"는 의미상 일관성이 있어 Phase 2 디버깅 시 비교가 쉽다.
+### Phase 0에서 준비할 것
 
-### Phase 1에서 입력할 값 (잠정)
-
-| 파라미터 | F446RE (참고) | **F411RE** |
-|----------|--------------|-----------|
-| Prescaler | 9 | **10** |
-| Time Quanta in Bit Segment 1 | 8 | **8** |
-| Time Quanta in Bit Segment 2 | 1 | **1** |
-| ReSynchronization Jump Width | 1 | **1** |
-
-검산: 50,000,000 / (10 × (1 + 8 + 1)) = **500,000 bps** ✓
-
-### Phase 1에서 재사용할 함정 회피 (F446RE log.md에서 학습)
-
-F411RE Phase 1에서 동일 패턴이 재발할 가능성이 높음:
-
-1. **PA11 풀업 강제** — `HAL_CAN_MspInit`의 USER CODE 1 블록에서 PA11에 `GPIO_PULLUP` 적용 필수. CubeMX GUI에서 AF 핀 Pull 설정은 무시됨.
-2. **Operating Mode = Loopback** 재확인 — `.ioc` 비트 타이밍 수정 시 Mode가 Normal로 회귀할 수 있음. Generate Code 후 `can.c` diff 확인.
-3. **비트 타이밍 검산** — 위 50,000,000 / (Pre × Total TQ) = 500,000 등식이 성립하는지 코드 측에서 한 번 더 검증.
-
-Phase 1 진입 전 본 항목들을 phase1 체크리스트에 명시할 것.
+Phase 0는 LED + UART만 검증한다. MCP2515 배선은 Phase 1 진입 후 처리. Phase 0에서 SPI를 켜지 않는다.
