@@ -5,8 +5,9 @@
 ![STM32](https://img.shields.io/badge/MCU-F446RE_%2B_F411RE-03234B?logo=stmicroelectronics&logoColor=white)
 ![Raspberry Pi](https://img.shields.io/badge/MPU-Raspberry_Pi_5-C51A4A?logo=raspberrypi&logoColor=white)
 ![CAN](https://img.shields.io/badge/Bus-CAN_2.0-green)
+![SPI](https://img.shields.io/badge/Interface-SPI-orange)
 
-STM32 보드 두 개를 중심으로 한 **CAN 2.0 노드 간 통신** 집중 학습 프로젝트. 액추에이터도, 섀시도, 애플리케이션 로직도 없다 — 버스와 프로토콜, 그리고 분산 MCU를 안정적으로 통신시키기 위해 필요한 규율에만 집중한다.
+STM32 보드 두 개를 중심으로 한 **CAN 2.0 노드 간 통신** 집중 학습 프로젝트. 액추에이터도, 섀시도, 애플리케이션 로직도 없다 — 버스와 프로토콜, 그리고 분산 MCU를 안정적으로 통신시키기 위해 필요한 규율에만 집중한다. F411RE는 bxCAN 페리퍼럴이 없어 **SPI(MCP2515)** 로 CAN 버스에 참여하며, SPI 제어도 이 프로젝트의 학습 범위에 포함된다.
 
 이 저장소는 **[Neuro-Drive](https://github.com/steppenhj/neuro-drive)** 의 후속 프로젝트로, 원래 Phase 6에 해당하는 내용을 분리한 것이다. 액추에이터 레이어를 걷어내고 기초에 집중하기 위해 별도 저장소로 추출했다.
 
