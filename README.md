@@ -236,7 +236,7 @@ F411RE 절차: [`docs/phases/phase1/checklist_f411re.md`](docs/phases/phase1/che
 
 ```bash
 # 양쪽 보드에 phase2_two_node 펌웨어 플래시
-# 배선: F446RE PA11/PA12 ↔ SN65HVD230 #1 ↔ CAN 버스 ↔ SN65HVD230 #2 ↔ F411RE PA11/PA12
+# 배선: F446RE PA11/PA12 ↔ SN65HVD230 ↔ CAN 버스 ↔ TJA1050 ↔ MCP2515 ↔ F411RE SPI2(PB13/14/15)
 # 공통 GND 필수 (phase0_checklist.md Step 2)
 
 # 각 노드의 UART에서 상대방의 하트비트 수신 카운터가 동기 증가하는지 확인
@@ -257,9 +257,6 @@ F411RE 절차: [`docs/phases/phase1/checklist_f411re.md`](docs/phases/phase1/che
 - 액추에이터 레이어 재구성 후 부모 **Neuro-Drive** 섀시와 재통합
 
 ---
-
-java -jar /tmp/plantuml.jar docs/diagrams/deployment_phase0.puml
-(plantuml 변경시 사용 명령어)
 
 ## 작성자
 
