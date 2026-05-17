@@ -154,10 +154,9 @@ multi-mcu-can/
 │   │   │   ├── ioc_f446re.md      # F446RE Phase 0 CubeMX 설정
 │   │   │   └── ioc_f411re.md      # F411RE Phase 0 CubeMX 설정
 │   │   └── phase1/
-│   │       ├── checklist.md       # F446RE bxCAN 루프백 절차 + 완료 기록
-│   │       ├── ioc_f446re.md      # F446RE Phase 1 CubeMX 설정
-│   │       ├── checklist_f411re.md  # F411RE MCP2515 SPI 루프백 절차
-│   │       └── ioc_f411re.md      # F411RE Phase 1 SPI2/MCP2515 설정
+│   │       ├── checklist_f446re.md  # F446RE bxCAN 루프백 절차 + 완료 기록
+│   │       ├── ioc_f446re.md        # F446RE Phase 1 CubeMX 설정
+│   │       └── checklist_f411re.md  # F411RE MCP2515 SPI 루프백 + CubeMX 설정
 │   └── specs/
 │       ├── can_protocol.md        # 전체 메시지 사전, DLC, 바이트 순서
 │       └── hardware.md            # 활성 BOM + 보류 부품
@@ -230,7 +229,7 @@ F411RE CubeMX 설정: [`docs/phases/phase0/ioc_f411re.md`](docs/phases/phase0/io
 #   UART에서 "init OK (CANSTAT=0x40)" 후 tx/rx 카운터 동기 증가 확인
 ```
 
-F446RE 절차: [`docs/phases/phase1/checklist.md`](docs/phases/phase1/checklist.md)
+F446RE 절차: [`docs/phases/phase1/checklist_f446re.md`](docs/phases/phase1/checklist_f446re.md)
 F411RE 절차: [`docs/phases/phase1/checklist_f411re.md`](docs/phases/phase1/checklist_f411re.md)
 
 ### Phase 2 — 2노드 CAN 통신
