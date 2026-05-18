@@ -166,7 +166,7 @@ multi-mcu-can/
 │   │   └── phase1_loopback/       # bxCAN 내부 루프백 (완료)
 │   └── f411re_node/
 │       ├── phase0_alive/          # LED 점멸 + UART "alive" (완료)
-│       └── phase1_loopback/       # MCP2515 SPI 루프백 (진행 예정)
+│       └── phase1_loopback/       # MCP2515 SPI 루프백 (완료)
 └── rpi/                           # Phase 3 이후 (현재 보류)
 ```
 
@@ -244,6 +244,8 @@ F446RE 절차: [`docs/phases/phase1/checklist_f446re.md`](docs/phases/phase1/che
 F411RE 절차: [`docs/phases/phase1/checklist_f411re.md`](docs/phases/phase1/checklist_f411re.md)
 
 <img src="docs/assets/captures/multimeter.png" alt="F411RE + MCP2515 배선 연속성 확인" width="500">
+
+<img src="docs/assets/captures/F411RE_Phase1.png" alt="F411RE Phase 1 UART 출력 — init OK, tx==rx 동기 증가" width="400">
 
 ### Phase 2 — 2노드 CAN 통신
 
