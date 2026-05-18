@@ -191,6 +191,17 @@ multi-mcu-can/
 
 **왜 F411RE에 MCP2515인가:** F411RE에는 bxCAN 페리퍼럴이 없다. MCP2515는 SPI를 통해 제어하는 외부 CAN 컨트롤러로, F411RE의 유일한 CAN 참여 경로다. 모듈에 내장된 TJA1050(5V) 트랜시버는 CAN 버스 쪽에만 연결되며, SPI MISO 선(5V → F411RE)은 PB14의 5V 내성으로 처리한다.
 
+### F411RE(3.3V) ↔ MCP2515(5V) 전압 호환성
+
+MCP2515 모듈은 5V로 공급되지만, F411RE(3.3V)와 레벨 컨버터 없이 직결이 가능하다. 방향별 이유는 다르다.
+
+| 신호 방향 | 전압 | 동작 이유 |
+|-----------|------|-----------|
+| F411RE → MCP2515 (MOSI, SCK, CS) | 3.3V → 5V 모듈 | MCP2515 TXD 입력의 VIH ≈ 2.1V. F411RE 출력 3.3V가 충분히 HIGH로 인식됨 |
+| MCP2515 → F411RE (MISO) | 5V → 3.3V MCU | PB14는 STM32F411RE 데이터시트 Table 11에서 **FT(Five-volt Tolerant)** 핀으로 분류. 5V 신호를 직접 수신 가능 |
+
+> **RPi5와 다른 이유:** RPi5 GPIO는 5V 내성이 없다. 동일한 MCP2515 모듈(MISO 5V)을 RPi5에 직결하면 GPIO 손상 위험이 있어 Phase 3를 보류한 원인 중 하나다 — [lesson_learned.md](docs/lesson_learned.md) 사전 회피 1 참조.
+
 **이 저장소에서는 배터리를 사용하지 않는다.** 부모 프로젝트의 사고는 배터리 배선과 관련이 있었다. 이 저장소는 USB 전원만 사용한다.
 
 > **Phase 3 이후 (RPi5 통합)** — MCP2515 + TJA1050 모듈을 RPi5에 직결하면 MISO 5V 출력이 3.3V 전용 GPIO를 손상시킬 위험이 있다. RPi5 연결 방식은 Phase 2 완료 후 별도 결정한다.
