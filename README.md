@@ -232,7 +232,7 @@ F411RE CubeMX 설정: [`docs/phases/phase0/ioc_f411re.md`](docs/phases/phase0/io
 F446RE 절차: [`docs/phases/phase1/checklist_f446re.md`](docs/phases/phase1/checklist_f446re.md)
 F411RE 절차: [`docs/phases/phase1/checklist_f411re.md`](docs/phases/phase1/checklist_f411re.md)
 
-![F411RE + MCP2515 배선 연속성 확인](docs/assets/captures/multimeter.png)
+<img src="docs/assets/captures/multimeter.png" alt="F411RE + MCP2515 배선 연속성 확인" width="500">
 
 ### Phase 2 — 2노드 CAN 통신
 
