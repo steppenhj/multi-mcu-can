@@ -459,7 +459,7 @@ static void mcp2515_init_loopback(void) {
     mcp2515_reset();                            /* Config 모드 진입 */
     mcp2515_write(MCP_CNF1, 0x00);             /* BRP=0, SJW=1 */
     mcp2515_write(MCP_CNF2, 0x91);             /* PhSeg1=3TQ, PropSeg=2TQ */
-    mcp2515_write(MCP_CNF3, 0x01);             /* PhSeg2=2TQ */
+    mcp2515_write(MCP_CNF3, 0x02);             /* PhSeg2=2TQ */
     mcp2515_write(MCP_RXB0CTRL, 0x60);         /* 필터 바이패스 (모든 프레임 수신) */
     mcp2515_write(MCP_CANCTRL, MCP_MODE_LOOPBACK);
     HAL_Delay(5);
