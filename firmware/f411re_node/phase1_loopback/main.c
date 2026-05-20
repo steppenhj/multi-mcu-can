@@ -87,6 +87,8 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+//mcp2515_reset() -> 0xC0 명령으로 MCP2515 소프트 리셋
 static void mcp2515_reset(void){
 	uint8_t cmd = MCP_RESET;
 	MCP_CS_LOW();
@@ -95,6 +97,7 @@ static void mcp2515_reset(void){
 	HAL_Delay(10);
 }
 
+// mcp2515_write(reg, val) -> 레지스터 1바이트 쓰기
 static void mcp2515_write(uint8_t reg, uint8_t val){
 	uint8_t buf[3] = {MCP_WRITE, reg, val};
 	MCP_CS_LOW();
@@ -102,6 +105,7 @@ static void mcp2515_write(uint8_t reg, uint8_t val){
 	MCP_CS_HIGH();
 }
 
+// mcp2515_read(reg) -> 레지스터 1바이트 읽기(더미 0xFF와 함께 3바이트 트랜잭션)
 static uint8_t mcp2515_read(uint8_t reg){
 	uint8_t tx[3] = {MCP_READ, reg, 0xFF};
 	uint8_t rx[3] = {0};
@@ -111,6 +115,7 @@ static uint8_t mcp2515_read(uint8_t reg){
 	return rx[2];
 }
 
+// mcp2515_bit_modify(reg, mask, val) -> 마스크 지정 비트만 변경 (원자적 수정)
 static void mcp2515_bit_modify(uint8_t reg, uint8_t mask, uint8_t val){
 	uint8_t buf[4] = {MCP_BIT_MODIFY, reg, mask, val};
 	MCP_CS_LOW();
@@ -118,6 +123,7 @@ static void mcp2515_bit_modify(uint8_t reg, uint8_t mask, uint8_t val){
 	MCP_CS_HIGH();
 }
 
+//초기화
 static void mcp2515_init_loopback(void) {
     mcp2515_reset();                            /* Config 모드 진입 */
     mcp2515_write(MCP_CNF1, 0x00);             /* BRP=0, SJW=1 */
@@ -128,12 +134,13 @@ static void mcp2515_init_loopback(void) {
     HAL_Delay(5);
 }
 
+// 프레임 전송
 static void mcp2515_send_frame(uint16_t id, uint8_t *data, uint8_t len){
-	mcp2515_write(MCP_TXB0SIDH, (id >> 3) & 0xFF);
-	mcp2515_write(MCP_TXB0SIDL, (id << 5) & 0xE0);
-	mcp2515_write(MCP_TXB0DLC, len & 0x0F);
+	mcp2515_write(MCP_TXB0SIDH, (id >> 3) & 0xFF); // ID 상위 8 비트
+	mcp2515_write(MCP_TXB0SIDL, (id << 5) & 0xE0); // ID 하위 3비트 -> [7:5]에 배치
+	mcp2515_write(MCP_TXB0DLC, len & 0x0F); //데이터 길이
 	for(uint8_t i=0; i<len && i<8; i++){
-		mcp2515_write(MCP_TXB0D0 + i, data[i]);
+		mcp2515_write(MCP_TXB0D0 + i, data[i]);  
 	}
 	uint8_t cmd = MCP_RTS_TX0;
 	MCP_CS_LOW();
@@ -195,6 +202,12 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    // 500 ms마다 반복
+    // 1. LED 토글 - LD2 blink로 동작 확인
+    // 2. TX - tx_count 값(4바이트)을 ID 0x123으로 전송
+    // 3. TX 완료 대기 - TXB0CTRL.TXREQ(bit3) 클리어될 때까지 최대 5ms 폴링
+    // 4. UART 출력 - [F411RE] tx=N rx=N t=Xms 형식으로 PC에서 시리얼 출력
+    
 	  uint32_t now = HAL_GetTick();
 	  if(now - last_tick >= 500){
 		  last_tick = now;
