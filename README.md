@@ -255,6 +255,10 @@ F411RE 절차: [`docs/phases/phase1/checklist_f411re.md`](docs/phases/phase1/che
 # 각 노드의 UART에서 상대방의 하트비트 수신 카운터가 동기 증가하는지 확인
 ```
 
+Phase 2 배선 절차: [`docs/phases/phase2/checklist.md`](docs/phases/phase2/checklist.md)
+
+<img src="docs/assets/captures/Phase2_CAN.png" alt="Phase 2 배선 — 좌: F411RE+MCP2515, 우: F446RE+SN65HVD230" width="600">
+
 ---
 
 ## 로드맵 (Phase 2 이후)
