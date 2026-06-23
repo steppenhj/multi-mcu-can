@@ -730,7 +730,7 @@ F411RE Tera Term:
 |------|-----------|------|
 | F446RE `peer_rx=0` 유지, `err=0x0` | F411RE가 아직 부팅되지 않음 또는 Normal 모드 아님 | F411RE init OK(CANSTAT=0x00) 확인. 두 노드 동시 부팅 재시도 |
 | F446RE `err≠0x0` (ACK 에러 포함) | F411RE가 ACK를 보내지 않음: F411RE 미부팅, 또는 배선 단선 | CANH/CANL 연속성 확인. GND 공통 연결 확인 |
-| F411RE `eflg=0x28` (TXEP+RXEP) | 에러 패시브 진입: ACK 미수신 반복 | F446RE가 정상 동작 중인지 확인. GND 공통 연결 필수 |
+| F411RE `eflg=0x18` (TXEP+RXEP) | 에러 패시브 진입: ACK 미수신 반복 | F446RE가 정상 동작 중인지 확인. GND 공통 연결 필수 |
 | F411RE `eflg=0x20` (TXBO) | 버스 오프: 에러 카운터 256 초과 | F411RE 재부팅. 원인 해결 후 재시도 |
 | 양쪽 `peer_rx=0`, 에러도 없음 | 모드 설정 오류 (F446RE=Loopback 유지 가능성) | F446RE CubeMX CAN1 Operating Mode = Normal 재확인 |
 | `peer_rx`가 간헐적으로 멈춤 | GND 공통 연결 접촉 불량 또는 종단 저항 누락 | GND 배선 재확인, CANH-CANL 60Ω 측정 |
