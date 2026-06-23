@@ -4,6 +4,22 @@
 
 ---
 
+## 작업 순서 요약
+
+| # | 단계 | 핵심 개념 | 상세 |
+|:-:|------|-----------|------|
+| 1 | F446RE `.ioc` — CAN1 **Normal** + **AutoRetransmission Enable** | bxCAN 비트타이밍·필터뱅크 구성 근거 | Step 3-1~3-4 |
+| 2 | F446RE 펌웨어 작성 — 필터·`HAL_CAN_Start`·TX(메일박스)·RX(FIFO 폴링) | bxCAN 메일박스/FIFO 구조, ACK 메커니즘 | Step 3-5~3-6 |
+| 3 | F446RE 단독 빌드·플래시 (alive known-good) | — | Step 3-4 |
+| 4 | F411RE `.ioc` — Phase 1과 동일, 프로젝트만 생성 | F411RE에 bxCAN이 없는 이유 | Step 4-1 |
+| 5 | F411RE 펌웨어 작성 — MCP2515 SPI 레지스터 레벨 (reset·CNF1~3·CANCTRL Normal·TXB/RXB) | SPI 트랜잭션·레지스터맵·비트조작 | Step 4-2 |
+| 6 | 단방향 검증 (동시 부팅·부트 메시지) | Normal 모드 ACK 의존성 | Step 5 |
+| 7 | 양방향 검증 (peer_rx 증가, err=0 / eflg=0) | — | Step 6 |
+| 8 | 내성 테스트(케이블 분리/재연결) + 30초 안정성 | 버스 복구 거동 | Step 7~8 |
+| 9 | 캡처 + 커밋 + Phase 2 ✅ 확정 | 마무리 | 사인오프 |
+
+---
+
 ## 이 단계가 검증하는 것
 
 Phase 2의 유일한 질문: **두 노드가 물리 CAN 버스를 통해 서로의 프레임을 주고받을 수 있는가?**
