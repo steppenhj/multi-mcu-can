@@ -260,32 +260,19 @@ Phase 1 설정을 기준으로, **변경되는 항목만** 강조한다:
 ### Step 3-4: Project Manager 및 코드 생성
 
 - [ ] Toolchain: STM32CubeIDE
-- [ ] Generate peripheral init as .c/.h pair: 체크
+- [ ] Generate peripheral init as .c/.h pair: **체크 해제** (인라인 생성 — 모든 `MX_*_Init`이 `main.c`에 포함되고 별도 `can.c`는 생기지 않는다)
 - [ ] **Generate Code → 빌드 → 에러 없이 .elf 생성**
 - [ ] 플래시 → LED 1Hz 점멸, UART "alive" 동작 (CAN 코드 추가 전 known-good 확인)
 
 > 이 시점에서 Normal 모드 CAN1이 활성화되어 있지만 USER CODE가 없으므로 `HAL_CAN_Start`가 호출되지 않았다. 버스에 아무것도 보내지 않는 상태라 에러가 발생하지 않는다.
 
-### Step 3-5: can.c에서 PA11 PULLUP 유지 또는 제거
+### Step 3-5: PA11 PULLUP — Phase 2에서는 생략
 
-Phase 1에서 `can.c` `HAL_CAN_MspInit` USER CODE 블록에 PA11 PULLUP을 추가했다. Phase 2에서 SN65HVD230이 RXD 라인을 능동적으로 구동하므로 PULLUP은 이론적으로 필요 없다. 그러나 남겨두어도 동작에 지장 없다.
+> **인라인 생성(.c/.h pair 체크 해제)에서는 `can.c`가 만들어지지 않는다.** `MX_CAN1_Init`을 포함한 모든 페리퍼럴 init이 `main.c`에 들어가고, `HAL_CAN_MspInit`은 `Core/Src/stm32f4xx_hal_msp.c`에 위치한다.
 
-- Phase 1 can.c의 USER CODE를 그대로 복사하거나, 새 프로젝트 can.c에 동일하게 추가한다.
+Phase 1에서는 `can.c`의 `HAL_CAN_MspInit`에 PA11 PULLUP을 추가했지만, Phase 2에서는 SN65HVD230 트랜시버가 RXD 라인을 능동적으로 구동하므로 **풀업이 불필요하다.** 따라서 이 스텝은 건너뛴다.
 
-```c
-/* can.c — HAL_CAN_MspInit USER CODE BEGIN 1 */
-/* PA11 (CAN_RX) Pull-up: SN65HVD230이 구동하므로 엄밀히 불필요하나 남겨두어도 무해 */
-GPIO_InitTypeDef rx_fix = {0};
-rx_fix.Pin  = GPIO_PIN_11;
-rx_fix.Mode = GPIO_MODE_AF_PP;
-rx_fix.Pull = GPIO_PULLUP;
-rx_fix.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-rx_fix.Alternate = GPIO_AF9_CAN1;
-HAL_GPIO_Init(GPIOA, &rx_fix);
-/* can.c — HAL_CAN_MspInit USER CODE END 1 */
-```
-
-- [ ] can.c USER CODE에 PA11 PULLUP 코드 배치 (Phase 1과 동일)
+- [ ] (생략) Phase 2는 PA11 풀업 불필요 — SN65HVD230이 RXD를 능동 구동
 
 ### Step 3-6: main.c USER CODE 작성
 
