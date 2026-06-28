@@ -3,6 +3,8 @@
   ******************************************************************************
   * @file           : main.c
   * @brief          : Main program body
+  * 2026/06/24 작성 시작
+  *
   ******************************************************************************
   * @attention
   *
@@ -21,7 +23,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,7 +48,9 @@ CAN_HandleTypeDef hcan1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+uint32_t self_tx_count = 0;
+uint32_t peer_rx_count = 0;
+static uint8_t sawtooth = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -94,6 +99,34 @@ int main(void)
   MX_CAN1_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+  // CAN 필터: 모드 ID 통과
+  CAN_FilterTypeDef filter = {0};
+  filter.FilterBank = 0;
+  fliter.FilterMode = CAN_FILTERMODE_IDMASK;
+  filter.FilterScale = CAN_FILTERSCALSE_32BIT;
+  filter.FilterIdHigh = 0x0000;
+  filter.FilterIdLow = 0x0000;
+  filter.FilterMaskIdHigh = 0x0000; //Mask 0 => 모든 ID 통과
+  filter.FilterMaskIdLow = 0x0000;
+  filter.FilterFIFOAssignment = CAN_RX_FIFO0;
+  filter.FilterActivation = ENABLE;
+  filter.SlaveStartFilterBank = 14;
+  HAL_CAN_ConfigFilter(&hcan1, &filter);
+
+  HAL_CAN_Start(&hcan1);
+
+  // CAN Start 결과 UART 출력
+  char boot_msg[64];
+  int boot_len = snprintf(boot_msg, sizeof(boot_msg),
+		  "[F446RE] CAN start: state=%lu err=0x%lX\r\n",
+		  (uint32_t)HAL_CAN_GetState(&hcan1),
+		  HAL_CAN_GetError(&hcan1));
+  HAL_UART_Tranmit(&huart2, (uint8_t*)boot_msg, boot_len, 100);
+
+  uint32_t last_hb_tick = 0;
+  uint32_t last_state_tick = 0;
+  uint8_t led_state = 0;
+
 
   /* USER CODE END 2 */
 
@@ -101,6 +134,71 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  uint32_t now = HAL_GetTick();
+
+	  // 하트비트 TX (0x010, 100ms)
+	  if (now - last_hb_tick >= 100){
+		  last_hb_tick = now;
+
+		  led_state = !led_state;
+		  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, led_state);
+
+		  CAN_TxHeaderTypeDef txh = {0};
+		  txh.StdId = 0x010;
+		  txh.IDE = CAN_ID_STD;
+		  txh.RTR = CAN_RTR_DATA;
+		  txh.DLC = 8;
+
+		  uint8_t tx_data[8] = {0};
+		  memcpy(tx_data, &self_tx_count, 4); // bytes 0-3: counter
+		  tx_data[4] = 0x00;
+		  uint16_t uptime_s = (uint16_t)(now / 1000);
+		  tx_data[5] = uptime_s & 0xFF;
+		  tx_data[6] = (uptime_s >> 8) & 0xFF;
+		  tx_data[7] = 0x00;
+
+		  uint32_t mailbox;
+		  if(HAL_CAN_AddTxMessage(&hcan1, &txh, tx_data, &mailbox) == HAL_OK){
+			  self_tx_count++;
+		  }
+
+		  // UART 상태 출력
+		  char msg[96];
+		  int len = snprintf(msg, sizeof(msg),
+				  "[F446RE] self_tx=%lu peer_rx=%lu err=0x%lX t=%lums\r\n",
+				  slef_tx_count, peer_rx_count,
+				  HAL_CAN_GetError(&hcan1), now);
+		  HAL_UART_Transmit(&huart2, (uint8_t*)msg, len, 100);
+	  }
+
+	  // 상태 데이터 TX (0x100, 50ms)
+	  if(now - last_state_tick >= 50){
+		  last_state_tick = now;
+
+		  CAN_TxHeaderTypeDef txh = {0};
+		  txh.StdId = 0x100;
+		  txh.IDE = CAN_ID_STD;
+		  txh.RTR = CAN_RTR_DATA;
+		  txh.DLC = 8;
+
+		  uint8_t tx_data[8];
+		  memset(tx_data, sawtooth, 8);
+		  sawtooth++;
+
+		  uint32_t mailbox++;
+		  HAL_CAN_AddTxMessage(&hcan1, &txh, tx_data, &mailbox);
+	  }
+
+	  // RX 폴링
+	  while (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) > 0){
+		  CAN_RxHeaderTypeDef rxh;
+		  uint8_t rx_data[8];
+		  if(HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &rxh, rx_data) == HAL_OK){
+			  if(rxh.StdId == 0x011){
+				  peer_rx_count++;
+			  }
+		  }
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
