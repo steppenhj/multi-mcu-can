@@ -14,6 +14,8 @@ STM32 보드 두 개로 CAN 2.0 노드 간 통신을 공부한 프로젝트다. 
 
 현재 범위는 Phase 0–2 (STM32 ↔ STM32 2노드 CAN)다. Raspberry Pi 5 게이트웨이 노드(Phase 3)는 호환성 문제로 보류 중이다. 사유는 아래 [Phase 3 — 보류 사유](#phase-3--보류-사유) 참조.
 
+> **✅ Phase 2 양방향 CAN 통신 검증 완료** — F446RE(native bxCAN) ↔ F411RE(MCP2515 SPI)를 하나의 물리 CAN 버스에서 **500 kbps 양방향**으로 통신. 두 노드가 서로의 하트비트를 동기 수신(`peer_rx == self_tx`)하고 에러 플래그는 0을 유지한다. 동작 영상·결과 로그는 아래 [시작하기 → Phase 2](#phase-2--2노드-can-통신).
+
 <img src="docs/assets/captures/Phase2_CAN.png" alt="Phase 2 배선 — 좌: F411RE+MCP2515, 우: F446RE+SN65HVD230" width="700">
 
 Phase 2 배선 완료 상태. 좌측이 F411RE + MCP2515(SPI CAN), 우측이 F446RE + SN65HVD230(3.3V 트랜시버). 중앙 브레드보드가 CAN_H / CAN_L / GND 공통 허브다.
