@@ -264,7 +264,11 @@ F411RE `CANSTAT=0x00`(Normal 모드 진입) 확인, F446RE `state=2`(HAL_CAN_STA
 
 <img src="docs/assets/captures/Phase2_CAN_Total.jpg" alt="Phase 2 전체 셋업 — 양쪽 노드 UART 출력을 노트북 두 터미널에서 동시 관찰" width="600">
 
-실시간 동작 영상: [`docs/assets/captures/Phase2_CAN.mp4`](docs/assets/captures/Phase2_CAN.mp4)
+실시간 동작 영상:
+
+<video src="https://github.com/user-attachments/assets/6a395c3b-1139-403d-bfb6-bea6765ab6b8" controls width="600"></video>
+
+> 영상이 재생되지 않으면: [`docs/assets/captures/Phase2_CAN.mp4`](docs/assets/captures/Phase2_CAN.mp4)
 
 ---
 
