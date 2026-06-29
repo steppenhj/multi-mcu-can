@@ -249,6 +249,23 @@ F411RE 절차: [`docs/phases/phase1/checklist_f411re.md`](docs/phases/phase1/che
 
 Phase 2 배선 절차: [`docs/phases/phase2/checklist.md`](docs/phases/phase2/checklist.md)
 
+**결과 — 양방향 500 kbps 통신 검증 완료.** 두 노드가 물리 CAN 버스를 통해 서로의 하트비트(F446RE `0x010` ↔ F411RE `0x011`)를 수신하며, 양쪽 `peer_rx`가 `self_tx`와 동기 증가한다. F446RE `err=0x0`, F411RE `eflg=0x00` (에러 플래그 없음) 유지.
+
+```
+[F411RE] init OK (CANSTAT=0x00)
+[F411RE] self_tx=479 peer_rx=478 eflg=0x00 t=47900ms
+[F446RE] CAN start: state=2 err=0x0
+[F446RE] self_tx=10  peer_rx=11  err=0x0  t=1000ms
+```
+
+F411RE `CANSTAT=0x00`(Normal 모드 진입) 확인, F446RE `state=2`(HAL_CAN_STATE_READY) 확인.
+
+<img src="docs/assets/captures/Phase2_CAN_Hardware.jpg" alt="Phase 2 배선 클로즈업 — F411RE+MCP2515, F446RE+SN65HVD230, 브레드보드 CAN 버스 허브" width="600">
+
+<img src="docs/assets/captures/Phase2_CAN_Total.jpg" alt="Phase 2 전체 셋업 — 양쪽 노드 UART 출력을 노트북 두 터미널에서 동시 관찰" width="600">
+
+실시간 동작 영상: [`docs/assets/captures/Phase2_CAN.mp4`](docs/assets/captures/Phase2_CAN.mp4)
+
 ---
 
 ## 로드맵 (Phase 2 이후)
