@@ -102,8 +102,8 @@ int main(void)
   // CAN 필터: 모드 ID 통과
   CAN_FilterTypeDef filter = {0};
   filter.FilterBank = 0;
-  fliter.FilterMode = CAN_FILTERMODE_IDMASK;
-  filter.FilterScale = CAN_FILTERSCALSE_32BIT;
+  filter.FilterMode = CAN_FILTERMODE_IDMASK;
+  filter.FilterScale = CAN_FILTERSCALE_32BIT;
   filter.FilterIdHigh = 0x0000;
   filter.FilterIdLow = 0x0000;
   filter.FilterMaskIdHigh = 0x0000; //Mask 0 => 모든 ID 통과
@@ -121,7 +121,7 @@ int main(void)
 		  "[F446RE] CAN start: state=%lu err=0x%lX\r\n",
 		  (uint32_t)HAL_CAN_GetState(&hcan1),
 		  HAL_CAN_GetError(&hcan1));
-  HAL_UART_Tranmit(&huart2, (uint8_t*)boot_msg, boot_len, 100);
+  HAL_UART_Transmit(&huart2, (uint8_t*)boot_msg, boot_len, 100);
 
   uint32_t last_hb_tick = 0;
   uint32_t last_state_tick = 0;
@@ -166,7 +166,7 @@ int main(void)
 		  char msg[96];
 		  int len = snprintf(msg, sizeof(msg),
 				  "[F446RE] self_tx=%lu peer_rx=%lu err=0x%lX t=%lums\r\n",
-				  slef_tx_count, peer_rx_count,
+				  self_tx_count, peer_rx_count,
 				  HAL_CAN_GetError(&hcan1), now);
 		  HAL_UART_Transmit(&huart2, (uint8_t*)msg, len, 100);
 	  }
@@ -185,7 +185,7 @@ int main(void)
 		  memset(tx_data, sawtooth, 8);
 		  sawtooth++;
 
-		  uint32_t mailbox++;
+		  uint32_t mailbox;
 		  HAL_CAN_AddTxMessage(&hcan1, &txh, tx_data, &mailbox);
 	  }
 
