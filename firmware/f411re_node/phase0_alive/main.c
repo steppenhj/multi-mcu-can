@@ -1,8 +1,12 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
+  * @file           : F411RE/phase0_alive/main.c
+  * @brief          : 1. 전원이 깨끗한가 (멀티미터)
+  *                   2. GND가 연속인가 (연속성 시험)
+  *                   3. MCU가 살아서 코드를 도는가 (LED + UART)
+  *                 LED 점멸: "코어가 살아있다"
+  *                 UART 정상 출력: "클럭 트리 설정이 실제로 맞다"
   ******************************************************************************
   * @attention
   *
@@ -67,7 +71,12 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+  // 7/30 main 초기화 순서 복습
+  //
+  // 1. HAL_Init();
+  // 2. SystemClock_Config();
+  // 3. MX_GPIO_Init();
+  // 4. MX_USART2_UART_Init();
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -83,7 +92,9 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  // 7/30 클럭 상향 전에 전압을 먼저 올려야 함 (VOS Scale1 = 100MHz 조건)
+  //   __HAL_RCC_PWR_CLK_ENABLE();          PWR 레지스터 접근용 클럭
+  //   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -102,14 +113,19 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  uint32_t now = HAL_GetTick();
-	  if(now - last_tick >= 500) {
-		  last_tick = now;
-		  led_state = !led_state;
+	  if(now - last_tick >= 500) { // HAL_Delay(500) -> 이건 500ms 동안 CPU를 붙잡고 있음. Delay로 막혀 있으면 RX 버퍼가 오버런됨
+		  last_tick = now;           // if 조건 하나가 LED와 UART를 동시에 지배
+		  led_state = !led_state; // 500ms on / 500ms off = 1Hz 점멸, on->off->on 토글 2번 필요 1000ms = 1Hz
 		  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, led_state);
 
 		  char msg[48];
-		  int len = snprintf(msg, sizeof(msg), "[F44RE] alive, t=%lums\r\n", now);
+		  int len = snprintf(msg, sizeof(msg), "[F411RE] alive, t=%lums\r\n", now);
+      // printf는 stdout으로 나가므로 newlib의 _write() retarget이 필요
+      // snprintf는 버퍼에만 쓰므로 retarget 없이 바로 넘길 수 있고, 힙을 안 씀
+      // 그런데 MISRA C에선 <stdio.h>의 표준 입출력 함수 사용을 금지함
+      // snprintf까지 포함.
 		  HAL_UART_Transmit(&huart2, (uint8_t*)msg, len, 100);
+      // 이건 500ms마다 한 번. 초당 2번 -> 2Hz
 	  }
   }
   /* USER CODE END 3 */
@@ -241,6 +257,9 @@ static void MX_GPIO_Init(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
+  // Error_Handler() - 기본 구현의 의도는 두 가지
+  // 1. fail-fast : 고장 상태에서 시스템이 어중간하게 계속 돌지 않게 함
+  // 2. 디버깅 편의: 디버거를 붙이면 PC가 여기 멈춰 있으니, 콜스택으로 어느 HAL_xxx_Init()이 실패했는지 즉시 역추적 가능
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
   while (1)
