@@ -99,7 +99,11 @@ int main(void)
   HAL_StatusTypeDef start_status;
 
   /* --- CAN 필터 --- */
-  CAN_FilterTypeDef filter = {0};
+  /* bxCAN은 필터를 통과한 프레임만 FIFO에 들어옴
+  -> 필터 설정 없이는 아무것도 수신 못 함.
+  IDMASK 모드 + 마스크 전부 0 = 모든 비트 don't care
+  = 모든 ID 수신 허용 */
+  CAN_FilterTypeDef filter = {0}; 
   filter.FilterBank          = 0;
   filter.FilterMode          = CAN_FILTERMODE_IDMASK;
   filter.FilterScale         = CAN_FILTERSCALE_32BIT;
@@ -109,7 +113,8 @@ int main(void)
   filter.FilterMaskIdLow     = 0x0000;
   filter.FilterFIFOAssignment = CAN_RX_FIFO0;
   filter.FilterActivation    = ENABLE;
-  filter.SlaveStartFilterBank = 14;
+  filter.SlaveStartFilterBank = 14; 
+  // 필터 뱅크 28개를 CAN1/CAN2가 분할 사용, 14번부터 CAN2 몫
   filter_status = HAL_CAN_ConfigFilter(&hcan1, &filter);
 
   /* --- CAN Start --- */
@@ -152,6 +157,9 @@ int main(void)
 		  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, led_state);
 
 		  /* -- TX --- */
+      // Stdld=0x123: 11비트 표준 ID
+      // RTR=DATA: 데이터 프레임 (리모트 프레임 아님)
+      // DLC=8: 페이로드 8바이트
 		  CAN_TxHeaderTypeDef tx_header = {0};
 		  tx_header.StdId	= 0x123;
 		  tx_header.IDE 	= CAN_ID_STD;
@@ -161,6 +169,8 @@ int main(void)
 		  memcpy(tx_data, &tx_count, 4); //카운터를 페이로드에 실음
 		  memset(tx_data + 4, 0xAA, 4);
 
+      /* TX 메일박스는 3개. AddTxMessage가 빈 메일박스를 골라
+      번호를 mailbox에 반환. 3개 모두 차 있으면 HAL_ERROR */
 		  uint32_t mailbox;
 		  HAL_StatusTypeDef tx_status = HAL_CAN_AddTxMessage(&hcan1, &tx_header, tx_data, &mailbox); //반환값 저장
 		  if(tx_status == HAL_OK){
@@ -171,6 +181,8 @@ int main(void)
 		  uint32_t state = HAL_CAN_GetState(&hcan1); // 상태 가져오기
 
 		  /* --- RX 폴링 --- */
+      /* FIFO에 쌓인 프레임 수(0~3, 깊이 3) 확인 후 폴링 수신.
+      GetRxMessage로 꺼내는 순간 FIFO에서 제거됨 */
 		  if(HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) > 0){
 			  CAN_RxHeaderTypeDef rx_header;
 			  uint8_t rx_data[8];

@@ -143,12 +143,20 @@ int main(void)
 		  led_state = !led_state;
 		  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, led_state);
 
+      /* 하트비트 ID 0x010: CAN은 ID가 낮을수록 중재(arbitration) 우선순위가 높음
+       -> 하트비트(0x010/0x011)가 데이터(0x100/0x200)보다 항상 먼저 버스를 잡음
+       F411 하트비트는 0x011: 동시 전송 시 0x010(F446)이 중재에서 이김*/
 		  CAN_TxHeaderTypeDef txh = {0};
 		  txh.StdId = 0x010;
 		  txh.IDE = CAN_ID_STD;
 		  txh.RTR = CAN_RTR_DATA;
 		  txh.DLC = 8;
 
+      /* 페이로드 레이아웃 (8B):
+        [0..3] self_tx_count (리틀엔디언)
+        [4]  예약(0x00)
+        [5..6] uptime 초 (리틀엔디언)
+        [7]  예약(0x00)*/
 		  uint8_t tx_data[8] = {0};
 		  memcpy(tx_data, &self_tx_count, 4); // bytes 0-3: counter
 		  tx_data[4] = 0x00;
@@ -172,6 +180,8 @@ int main(void)
 	  }
 
 	  // 상태 데이터 TX (0x100, 50ms)
+    /* 상태 데이터 0x100 @50ms: sawtooth(0->255 반복) 패턴
+       -> 수신 측에서 값이 1씩 증가하는지 보면 프레임 유실을 눈으로 검증 가능*/
 	  if(now - last_state_tick >= 50){
 		  last_state_tick = now;
 
@@ -190,11 +200,15 @@ int main(void)
 	  }
 
 	  // RX 폴링
+    /* Phase 1의 if->while로 변경: FIFO(깊이 3)를 한 번에 전부 비움
+       상대가 100ms+50ms 두 주기로 보내므로 한 루프에 여러 프레임이 쌓일 수 있음*/
 	  while (HAL_CAN_GetRxFifoFillLevel(&hcan1, CAN_RX_FIFO0) > 0){
 		  CAN_RxHeaderTypeDef rxh;
 		  uint8_t rx_data[8];
 		  if(HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &rxh, rx_data) == HAL_OK){
 			  if(rxh.StdId == 0x011){
+          // 하드웨어 필터는 전체 open -> ID 구분은 소프트웨어에서
+          // 0x011 (F411 하트비트)만 카운트, 0x200(센서)은 무시
 				  peer_rx_count++;
 			  }
 		  }
@@ -272,11 +286,20 @@ static void MX_CAN1_Init(void)
   /* USER CODE END CAN1_Init 0 */
 
   /* USER CODE BEGIN CAN1_Init 1 */
-
+  // NORMAL 모드: 실제 버스 참여. 전송 성공에 다른 노드의 ACK 필요
+  /* -> 혼자 켜면 ACK 에러로 전송 실패 (두 노드 모두 켜야 통신 성립)
+  
+  * 비트 타이밍: APB1 45MHz / Prescaler 9 = 5MHz, 1비트 = 1+7+2 = 10TQ -> 500kbps
+  * Phase 1(BS1=8/BS2=1, 샘플 90%) -> BS1=7/BS2=2(샘플 80%)로 변경:
+  * 실버스에선 전파 지연, 클럭 오차 흡수 위해 75~80% 권장이라고 함. MCP2515는 75%
+  
+    AutoRetransmission ENABLE: Phase 1(DISABLE)과 반대.
+    실버스에선 에러, 중재 패배 시 재전송이 정상 동작.
+    단 상대가 없으면 ACK 에러로 무한 재전송됨*/
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
   hcan1.Init.Prescaler = 9;
-  hcan1.Init.Mode = CAN_MODE_NORMAL;
+  hcan1.Init.Mode = CAN_MODE_NORMAL; 
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan1.Init.TimeSeg1 = CAN_BS1_7TQ;
   hcan1.Init.TimeSeg2 = CAN_BS2_2TQ;

@@ -134,7 +134,9 @@ static void mcp2515_init_normal(void){
 	mcp2515_write(MCP_CNF2, 0x91); // PhSeg1=3TQ, PropSeg=2TQ
 	mcp2515_write(MCP_CNF3, 0x01); // PhSeg2=2TQ -> 500 kbps @ 8MHz
 	mcp2515_write(MCP_RXB0CTRL, 0x60); // RXB0: 필터 바이패스 (모든 프레임 수신)
-	mcp2515_write(MCP_CANCTRL, MCP_MODE_NORMAL); // 핵심 변경: 0ㅌ00 = Normal
+	mcp2515_write(MCP_CANCTRL, MCP_MODE_NORMAL); // 핵심 변경: 0x00 = Normal
+  /* CANCTRL[7:5]=000 = Normal 모드: Phase 1과의 핵심 차이.
+  실제 버스 참여 -> 전송 성공에 상대 노드의 ACK 필요*/
 	HAL_Delay(5);
 }
 
@@ -226,15 +228,25 @@ int main(void)
 		  mcp2515_send_frame(0x011, tx_data, 8);
 
 		  // Tx 완료 대기 (최대 10ms): Normal 모드는 버스 점유
+      /* 타임아웃이 5ms->10ms로 늘어난 이유
+      Phase 1(5ms)보다 여유 있게 10ms: Normal 모드에선
+      중재 패배, 에러 시 재전송하며 대기가 길어질 수 있음*/
 		  uint32_t t = HAL_GetTick();
 		  while((mcp2515_read(MCP_TXB0CTRL) & 0x08) && (HAL_GetTick() - t < 10)) {}
 
 		  // Tx 성공 여부: TXERR 비트(0x10) 없으면 성공
+      /* Phase 1은 보내면 무조건 카운트했지만 Normal 모드는 실패가 실제로 발생
+      TXB0CTRL. TXERR(bit4)=0이면 전송 성공 -> 그때만 self_tx_count 증가
+      (혼자 켜져 있으면 ACK 못 받아 TXERR 세트 -> 카운트 안 늘어남)*/
 		  if(!(mcp2515_read(MCP_TXB0CTRL) & 0x10)) {
 			  self_tx_count++;
 		  }
 
 		  // UART 상태 출력
+      /* EFLG = 에러 계기판. 주요 비트:
+        RXO0VR(0x40) RXB0 오버런(수신 유실), TXB0(0x20) 버스오프,
+        TXEP/RXEP(0x10/0x08) 에러 패시브, EWARN(0x01) 에러 경고
+        정상이면 0x00. 배선/종단저항 문제 디버깅의 1차 단서*/
 		  uint8_t eflg = mcp2515_read(MCP_EFLG);
 		  char msg[96];
 		  int len = snprintf(msg, sizeof(msg),
@@ -259,6 +271,9 @@ int main(void)
 
 	  // RX 폴링
 	  if(mcp2515_read(MCP_CANINTF) & 0x01){ //RX0IF
+      /* 송신 시 분할(id>>3, id<<5)의 정확한 역연산으로 11비트 ID 복원:
+      ID = (SIDH << 3) | (SIDL >> 5)
+      예) SIDH=0x02, SIDL=0x00 -> 0x010 (F446 하트비트)*/
 		  uint8_t rx_sidh = mcp2515_read(MCP_RXB0SIDH);
 		  uint8_t rx_sidl = mcp2515_read(MCP_RXB0SIDL);
 		  uint16_t rx_id = ((uint16_t)rx_sidh << 3) | (rx_sidl >> 5);
@@ -270,6 +285,8 @@ int main(void)
 		  }
 		  mcp2515_bit_modify(MCP_CANINTF, 0x01, 0x00); // RX0IF 클리어
 
+      /* RXB0는 필터 open이라 0x100(F446 상태 데이터)도 들어옴
+       -> 소프트웨어에서 하트비트만 골라 카운트*/
 		  if(rx_id == 0x010){ // F446RE 하트비트
 			  peer_rx_count++;
 		  }

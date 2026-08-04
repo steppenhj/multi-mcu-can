@@ -107,6 +107,10 @@ static void mcp2515_write(uint8_t reg, uint8_t val){
 
 // mcp2515_read(reg) -> 레지스터 1바이트 읽기(더미 0xFF와 함께 3바이트 트랜잭션)
 static uint8_t mcp2515_read(uint8_t reg){
+  // 3바이트인 이유
+  /* SPI는 전이중: 보낸 바이트 수만큼 동시에 받는다
+  * [READ, 주소, 더미] 3바이트를 보내는 동안
+  * [무의미, 무의미, 데이터]가 들어옴 -> rx[2]가 실제 값*/
 	uint8_t tx[3] = {MCP_READ, reg, 0xFF};
 	uint8_t rx[3] = {0};
 	MCP_CS_LOW();
@@ -126,6 +130,11 @@ static void mcp2515_bit_modify(uint8_t reg, uint8_t mask, uint8_t val){
 //초기화
 static void mcp2515_init_loopback(void) {
     mcp2515_reset();                            /* Config 모드 진입 */
+    /*
+    비트 타이밍 (8MHz 크리스탈 기준):
+    TQ = Fosc / (2*(BRP+1)) = 8MHz / 2 = 4MHz
+    1비트 = Sync(1) + PropSeg(2) + PhSeg1(3) + PhSeg2(2) = 8TQ
+    -> 4MHz / 8 = 500kbps. F446RE쪽과 반드시 일치해야 함*/
     mcp2515_write(MCP_CNF1, 0x00);             /* BRP=0, SJW=1 */
     mcp2515_write(MCP_CNF2, 0x91);             /* PhSeg1=3TQ, PropSeg=2TQ */
     mcp2515_write(MCP_CNF3, 0x01);             /* PhSeg2=2TQ */
@@ -136,12 +145,18 @@ static void mcp2515_init_loopback(void) {
 
 // 프레임 전송
 static void mcp2515_send_frame(uint16_t id, uint8_t *data, uint8_t len){
+  /* 11비트 ID를 SIDH(상위 8비트) + SIDL[7:5](하위 3비트)로 분할
+  예) 0x123 = 0b001_0010_0011 (11비트) 
+  상위 8비트 = 0b0010_0100 = 0x24 → SIDH
+  하위 3비트 = 0b011 → SIDL[7:5] = 0b0110_0000 = 0x60 */
 	mcp2515_write(MCP_TXB0SIDH, (id >> 3) & 0xFF); // ID 상위 8 비트
 	mcp2515_write(MCP_TXB0SIDL, (id << 5) & 0xE0); // ID 하위 3비트 -> [7:5]에 배치
 	mcp2515_write(MCP_TXB0DLC, len & 0x0F); //데이터 길이
 	for(uint8_t i=0; i<len && i<8; i++){
-		mcp2515_write(MCP_TXB0D0 + i, data[i]);  
+		mcp2515_write(MCP_TXB0D0 + i, data[i]);
 	}
+  /* RTS(0x81): TXB0 전송 트리거 전용 단축 명령
+   (TXB0CTRL에 TXREQ를 write하는 것보다 SPI 트랜잭션이 짧음)*/
 	uint8_t cmd = MCP_RTS_TX0;
 	MCP_CS_LOW();
 	HAL_SPI_Transmit(&hspi2, &cmd, 1, 10);
@@ -181,12 +196,13 @@ int main(void)
   MX_SPI2_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  MCP_CS_HIGH();
+  MCP_CS_HIGH(); // CS는 idle에서 HIGH가 기본 - 첫 트랜잭션 전에 확실히 올려둠
   HAL_Delay(10);
 
   mcp2515_init_loopback();
 
-  /* CANSTAT 읽기 - Config 모드 (0X80)인지 확인 */
+  /* 모드 전환은 '요청'일 뿐 즉시 반영 보장이 없음
+  -> CANSTAT[7:5]를 읽어 Loopback(0x40) 전환 성공 여부 확인 */
   uint8_t canstat = mcp2515_read(MCP_CANSTAT);
   char init_msg[64];
   int init_len = snprintf(init_msg, sizeof(init_msg), "[F411RE] init %s (CANSTAT=0x%02x)\r\n", ((canstat & 0xE0) == MCP_MODE_LOOPBACK) ? "OK" : "FAIL", canstat);
@@ -220,12 +236,16 @@ int main(void)
 		  mcp2515_send_frame(0x123, tx_data, 4);
 		  tx_count++;
 
-		  // TX 완료 대기 (TXB0CTRL.TXBEQ 클리어 대기, 최대 5ms)
+		  // TX 완료 대기 (TXB0CTRL.TXREQ 클리어 대기, 최대 5ms)
+      // TXREQ(bit3)는 전송 완료 시 하드웨어가 클리어
+      // 5ms 타임아웃: 버스 에러 시 무한 대기 방지
 		  uint32_t t = HAL_GetTick();
 		  while((mcp2515_read(MCP_TXB0CTRL) & 0x08) && (HAL_GetTick() - t < 5)) {}
 
 		  // RX 폴링
 		  if(mcp2515_read(MCP_CANINTF) & 0x01){ //RX0IF 비트
+        // RX0IF를 클리어해야 다음 수신 감지 가능
+        // bit_modify를 쓰는 이유: 다른 인터럽트 플래그 보존
 			  uint8_t rx_data[8];
 			  uint8_t rx_len = mcp2515_read(MCP_RXB0DLC) & 0x0F;
 			  for (uint8_t i=0; i<rx_len && i<8; i++){
