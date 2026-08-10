@@ -239,7 +239,7 @@ int main(void)
       TXB0CTRL. TXERR(bit4)=0이면 전송 성공 -> 그때만 self_tx_count 증가
       (혼자 켜져 있으면 ACK 못 받아 TXERR 세트 -> 카운트 안 늘어남)*/
 		  if(!(mcp2515_read(MCP_TXB0CTRL) & 0x10)) {
-			  self_tx_count++;
+			  self_tx_count++; 
 		  }
 
 		  // UART 상태 출력
@@ -247,6 +247,9 @@ int main(void)
         RXO0VR(0x40) RXB0 오버런(수신 유실), TXB0(0x20) 버스오프,
         TXEP/RXEP(0x10/0x08) 에러 패시브, EWARN(0x01) 에러 경고
         정상이면 0x00. 배선/종단저항 문제 디버깅의 1차 단서*/
+        // self_tx 증가 = 내 전송이 ACK 받음 = 상대 칩이 살아있음
+        // peer_rx 증가 = 상대 하트비트가 내 RXB0까지 도달 = 역방향도 정상
+        // eflg=0x00 = 에러 카운터, 오버런 없음 = 버스 품질 정상
 		  uint8_t eflg = mcp2515_read(MCP_EFLG);
 		  char msg[96];
 		  int len = snprintf(msg, sizeof(msg),
@@ -270,6 +273,8 @@ int main(void)
 	  }
 
 	  // RX 폴링
+    // F446이 보낸 0x010/0x100이 도착하면:
+    // MCP2515가 자율적으로: 비트수신-> CRC검사-> ACK 슬롯을 dominant로 쳐줌
 	  if(mcp2515_read(MCP_CANINTF) & 0x01){ //RX0IF
       /* 송신 시 분할(id>>3, id<<5)의 정확한 역연산으로 11비트 ID 복원:
       ID = (SIDH << 3) | (SIDL >> 5)
