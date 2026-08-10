@@ -8,13 +8,13 @@
 
 STM32 보드 두 개로 CAN 2.0 노드 간 통신을 공부한 프로젝트입니다. 모터도 섀시도 애플리케이션 로직도 없습니다. 버스와 프로토콜, 그리고 분산된 MCU를 안정적으로 통신시키는 데 필요한 것만 다뤘습니다. F411RE는 bxCAN 페리퍼럴이 없어서 SPI로 MCP2515를 붙여 버스에 참여시켰고, 그 SPI 제어까지가 이 프로젝트의 범위입니다.
 
-원래 [Neuro-Drive](https://github.com/steppenhj/Neuro-Drive-CPP/blob/main/README.md)의 Phase 6이었는데, 액추에이터를 모두 걷어내고 CAN 통신만 보기 위해 따로 떼어냈습니다.
+원래 [Neuro-Drive](https://github.com/steppenhj/Neuro-Drive/blob/main/README.md)의 Phase 6이었는데, 액추에이터를 모두 걷어내고 CAN 통신만 보기 위해 따로 떼어냈습니다.
 
 펌웨어는 STM32CubeIDE에서 작성·빌드·디버깅하고, 검증이 끝난 `.ioc`와 핵심 소스(`main.c`, `can.c` 등)만 여기에 복사해서 보관합니다. 문서(`.md`)는 여기서 직접 작성합니다. 즉 이 repo는 개발 환경이 아니라 CubeIDE에서 검증한 펌웨어 스냅샷 + 문서 보관소입니다.
 
 현재 범위는 Phase 0–2 (STM32 ↔ STM32 2노드 CAN)입니다. Raspberry Pi 5 게이트웨이 노드(Phase 3)는 호환성 문제로 보류 중입니다. 사유는 아래 [Phase 3 — 보류 사유](#phase-3--보류-사유)에서 확인할 수 있습니다.
 
-> **✅ Phase 2 양방향 CAN 통신 검증 완료** — F446RE(native bxCAN) ↔ F411RE(MCP2515 SPI)를 하나의 물리 CAN 버스에서 **500 kbps 양방향**으로 통신합니다. 두 노드가 서로의 하트비트를 동기 수신(`peer_rx == self_tx`)하고 에러 플래그는 0을 유지합니다. 동작 영상·결과 로그는 아래 [시작하기 → Phase 2](#phase-2--2노드-can-통신)에서 확인할 수 있습니다.
+> **✅ Phase 2 양방향 CAN 통신 검증 완료** — F446RE(native bxCAN) ↔ F411RE(MCP2515 SPI)를 하나의 물리 CAN 버스에서 **500 kbps 양방향**으로 통신합니다. 두 노드가 서로의 하트비트를 동기 수신하고(각 노드의 `peer_rx`가 상대 노드의 `self_tx`를 따라 증가) 에러 플래그는 0을 유지합니다. 동작 영상·결과 로그는 아래 [시작하기 → Phase 2](#phase-2--2노드-can-통신)에서 확인할 수 있습니다.
 
 <img src="docs/assets/captures/Phase2_CAN.png" alt="Phase 2 배선 — 좌: F411RE+MCP2515, 우: F446RE+SN65HVD230" width="700">
 
@@ -152,21 +152,24 @@ multi-mcu-can/
 │   │   │   ├── checklist.md       # 전원/GND 검증 절차
 │   │   │   ├── ioc_f446re.md      # F446RE Phase 0 CubeMX 설정
 │   │   │   └── ioc_f411re.md      # F411RE Phase 0 CubeMX 설정
-│   │   └── phase1/
-│   │       ├── checklist_f446re.md  # F446RE bxCAN 루프백 절차 + 완료 기록
-│   │       ├── ioc_f446re.md        # F446RE Phase 1 CubeMX 설정
-│   │       └── checklist_f411re.md  # F411RE MCP2515 SPI 루프백 + CubeMX 설정
+│   │   ├── phase1/
+│   │   │   ├── checklist_f446re.md  # F446RE bxCAN 루프백 절차 + 완료 기록
+│   │   │   ├── ioc_f446re.md        # F446RE Phase 1 CubeMX 설정
+│   │   │   └── checklist_f411re.md  # F411RE MCP2515 SPI 루프백 + CubeMX 설정
+│   │   └── phase2/
+│   │       └── checklist.md         # 2노드 배선 절차 + 검증 기록
 │   └── specs/
 │       ├── can_protocol.md        # 전체 메시지 사전, DLC, 바이트 순서
 │       └── hardware.md            # 활성 BOM + 보류 부품
-├── firmware/
-│   ├── f446re_node/
-│   │   ├── phase0_alive/          # LED 점멸 + UART "alive" (완료)
-│   │   └── phase1_loopback/       # bxCAN 내부 루프백 (완료)
-│   └── f411re_node/
-│       ├── phase0_alive/          # LED 점멸 + UART "alive" (완료)
-│       └── phase1_loopback/       # MCP2515 SPI 루프백 (완료)
-└── rpi/                           # Phase 3 이후 (현재 보류)
+└── firmware/
+    ├── f446re_node/
+    │   ├── phase0_alive/          # LED 점멸 + UART "alive" (완료)
+    │   ├── phase1_loopback/       # bxCAN 내부 루프백 (완료)
+    │   └── phase2_two_node/       # 2노드 CAN 통신 (완료)
+    └── f411re_node/
+        ├── phase0_alive/          # LED 점멸 + UART "alive" (완료)
+        ├── phase1_loopback/       # MCP2515 SPI 루프백 (완료)
+        └── phase2_two_node/       # 2노드 CAN 통신 (완료)
 ```
 
 Phase 2가 깨져도 Phase 1은 그대로 플래시해서 돌릴 수 있습니다.
@@ -194,8 +197,10 @@ MCP2515 모듈은 5V로 공급하지만 F411RE(3.3V)와 레벨 컨버터 없이 
 
 | 신호 방향 | 전압 | 동작 이유 |
 |-----------|------|-----------|
-| F411RE → MCP2515 (MOSI, SCK, CS) | 3.3V → 5V 모듈 | MCP2515 입력 VIH ≈ 2.1V. F411RE의 3.3V 출력이면 충분히 HIGH로 인식 |
+| F411RE → MCP2515 (MOSI, SCK, CS) | 3.3V → 5V 모듈 | 데이터시트(DS20001801K, Table 13-1) VIH 최소 0.7×VDD = 3.5V(5V 공급)로, 3.3V 구동은 엄밀히 스펙 마진 밖. 실측으로는 안정 동작을 확인했고, 정석은 레벨 시프터 |
 | MCP2515 → F411RE (MISO) | 5V → 3.3V MCU | PB14는 F411RE 데이터시트 Table 11에서 FT(5V 내성) 핀. 5V를 직접 받아도 됨 |
+
+MOSI/SCK/CS 방향은 스펙 한계를 인지한 상태의 의도적 타협입니다. Phase 2 전 구간에서 SPI 통신 오류(CANSTAT 오독, 프레임 깨짐)는 관찰되지 않았지만, 장기 운용 구성이라면 레벨 시프터를 넣는 것이 맞습니다.
 
 같은 모듈을 RPi5에 직결하지 못하는 것이 이 MISO 5V 때문입니다. RPi5 GPIO는 5V 내성이 없어서 Phase 3를 보류했습니다.
 
@@ -260,7 +265,7 @@ Phase 2 배선 절차: [`docs/phases/phase2/checklist.md`](docs/phases/phase2/ch
 [F446RE] self_tx=10  peer_rx=11  err=0x0  t=1000ms
 ```
 
-F411RE는 `CANSTAT=0x00`(Normal 모드 진입), F446RE는 `state=2`(HAL_CAN_STATE_READY)를 확인했습니다.
+F411RE는 `CANSTAT=0x00`(Normal 모드 진입), F446RE는 `state=2`(HAL_CAN_STATE_LISTENING - `HAL_CAN_Start` 이후 버스 참여 상태)를 확인했습니다.
 
 <img src="docs/assets/captures/Phase2_CAN_Hardware.jpg" alt="Phase 2 배선 클로즈업 — F411RE+MCP2515, F446RE+SN65HVD230, 브레드보드 CAN 버스 허브" width="600">
 
@@ -281,7 +286,7 @@ F411RE는 `CANSTAT=0x00`(Normal 모드 진입), F446RE는 `state=2`(HAL_CAN_STAT
 - Phase 3: RPi5 게이트웨이 노드 추가 (CAN HAT / USB-CAN 어댑터 / 로직 레벨 컨버터 중 택)
 - Phase 4: 주기적 + 이벤트 기반 메시지 스케줄링, 우선순위 처리
 - Phase 5: 오류 처리, 버스 오프 복구, 진단 교환 (UDS 스타일)
-- CAN-FD 마이그레이션 (F446RE는 되지만 F411RE는 안 됨 — 노드 교체 필요)
+- CAN-FD 마이그레이션 - 두 노드 모두 하드웨어 교체 필요. F446RE의 bxCAN은 CAN 2.0 전용이라 FDCAN 페리퍼럴이 있는 계열(G4/H7 등)로, MCP2515는 FD 지원 후속 칩(MCP2518FD 등)으로 바꿔야 함
 - ISO-TP (ISO-15765-2)로 8바이트 넘는 진단 페이로드 분할
 - UDS 서비스 구현 (DTC 읽기, ECU 초기화, 프로그래밍 세션)
 - 액추에이터 레이어 다시 올려서 부모 Neuro-Drive 섀시와 재통합
